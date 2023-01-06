@@ -1,6 +1,6 @@
 # Multor
 
-Multor - Modeling vULkan com moTOR.
+Multor - Modeling vULkan commoTOR.
 
 This is my project by learning the Vulkan, the computer graphics, visualization interesting physics processes and etc.
 It based on the [OpenGL](https://learnopengl.com/) and [Vulkan](https://vulkan-tutorial.com) tutorials. And on this stage it is really similarly them.
