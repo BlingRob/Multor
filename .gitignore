@@ -1,0 +1,14 @@
+/.vs
+/.vscode
+/Debug
+/Release
+*.pdb
+*.exp
+/build*
+/develop
+/dependencies/assimp
+/dependencies/glm
+/dependencies/imgui
+/dependencies/imgui-filebrowser
+/dependencies/sdl
+/dependencies/VulkanSDK

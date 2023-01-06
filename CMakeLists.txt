@@ -1,0 +1,19 @@
+﻿cmake_minimum_required (VERSION 3.10)
+
+project (VulkanEngine)
+set(CMAKE_CXX_STANDARD 17)
+
+if("${CMAKE_BUILD_TYPE}" STREQUAL "")
+	set(CMAKE_BUILD_TYPE "Debug")
+endif()
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/libs CACHE PATH " " FORCE)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/libs CACHE PATH " " FORCE)
+if(WIN32)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/exe/ CACHE PATH " " FORCE)
+elseif(UNIX)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/exe/${CMAKE_BUILD_TYPE}/ CACHE PATH " " FORCE)
+endif()
+
+add_subdirectory(dependencies)
+add_subdirectory(VulkanEngine)

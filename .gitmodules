@@ -1,0 +1,23 @@
+[submodule "VulkanSDK"]
+	path = dependencies/VulkanSDK
+	url = https://github.com/BlingRob/VulkanSDK
+	branch = sdk-1.3.236
+[submodule "glm"]
+	path = dependencies/glm
+	url = https://github.com/g-truc/glm
+	branch = master
+[submodule "sdl"]
+	path = dependencies/sdl
+	url = https://github.com/libsdl-org/SDL
+	branch = main
+[submodule "assimp"]
+	path = dependencies/assimp
+	url = https://github.com/assimp/assimp
+	branch = master
+[submodule "imgui"]
+	path = dependencies/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = master
+[submodule "imgui-filebrowser"]
+	path = dependencies/imgui-filebrowser
+	url = https://github.com/AirGuanZ/imgui-filebrowser
