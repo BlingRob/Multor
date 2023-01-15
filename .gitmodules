@@ -1,7 +1,3 @@
-[submodule "dependencies/VulkanSDK"]
-	path = dependencies/VulkanSDK
-	url = https://github.com/BlingRob/VulkanSDK
-	branch = sdk-1.3.236
 [submodule "dependencies/glm"]
 	path = dependencies/glm
 	url = https://github.com/g-truc/glm

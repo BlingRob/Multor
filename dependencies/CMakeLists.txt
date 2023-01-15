@@ -44,27 +44,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sqlite ${CMAKE_CURRENT_BINARY_DIR}/
 add_subdirectory(VulkanSDK ${CMAKE_CURRENT_BINARY_DIR}/VulkanSDK)
 find_package(VulkanSDK REQUIRED HINTS ${CMAKE_CURRENT_BINARY_DIR}/VulkanSDK/cmake/)
 
-message("Coping shared library file")
-if(UNIX)
-    file(COPY ${VULKAN_SHARED_LIB} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/)
-    file(GLOB VulLib ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libvulkan.so?*)
-    file(RENAME ${VulLib} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libvulkan.so)
-elseif(WIN32)
-    file(COPY ${VULKAN_SHARED_LIB} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/)
-endif()
-
-message("Install folder with shaders and coping its")
-file(COPY ${CMAKE_SOURCE_DIR}/shaders
-          DESTINATION ${CMAKE_BINARY_DIR})
-
-add_custom_target(${PROJECT_NAME})          
-add_custom_command(
-     TARGET ${PROJECT_NAME}
-     PRE_BUILD
-     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_CURRENT_BINARY_DIR}/VulkanSDK --target VulkanSDK
-)
-
-  
 # ###########################################################
 set_target_properties(${SDL3} stb assimp SQLLite
     PROPERTIES
@@ -93,7 +72,11 @@ set_target_properties(${SDL3} stb assimp SQLLite
 ###########################################################
 
 # Put all libraries into a variable
-set(LIBS assimp SDL3::SDL3_main SDL3::SDL3 SQLLite ${VULKAN_LIBS} ${VULKAN_SHARED_LIBS} stb CACHE STRING "Libraries")
+if(UNIX)
+    set(LIBS assimp SDL3 SQLLite ${VULKAN_LIBS} ${VULKAN_SHARED_LIBS} stb CACHE STRING "Libraries")
+else()
+    set(LIBS assimp SDL3 SQLLite ${VULKAN_LIBS} stb CACHE STRING "Libraries")
+endif()
 
 if(UNIX)
     list(APPEND CMAKE_CXX_FLAGS "-Wno-error ${CMAKE_CXX_FLAGS}")

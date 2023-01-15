@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.10)
 
-project (VulkanEngine)
+project (Multor)
 set(CMAKE_CXX_STANDARD 17)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
@@ -16,4 +16,4 @@ elseif(UNIX)
 endif()
 
 add_subdirectory(dependencies)
-add_subdirectory(VulkanEngine)
+add_subdirectory(Multor)
