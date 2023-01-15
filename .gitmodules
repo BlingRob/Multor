@@ -17,3 +17,7 @@
 [submodule "dependencies/imgui-filebrowser"]
 	path = dependencies/imgui-filebrowser
 	url = https://github.com/AirGuanZ/imgui-filebrowser
+[submodule "dependencies/VulkanSDK"]
+	path = dependencies/VulkanSDK
+	url = https://github.com/BlingRob/VulkanSDK
+	branch = master
