@@ -8,13 +8,14 @@ Vertexes::Vertexes(std::size_t size, const float* positions, std::vector<std::ui
 {
 	if (size == 0)
 		return;
-	_size = size;
-	_verts.resize(size);
+		
+	size_ = size;
+	verts_.resize(size);
 	uint32_t i = 0;
 
 	if (positions)
 	{
-		for (auto& vert : _verts)
+		for (auto& vert : verts_)
 			vert.pos.x = positions[i], vert.pos.y = positions[i + 1], vert.pos.z = positions[i + 2], i += 3;
 		i = 0;
 	}
@@ -26,28 +27,28 @@ Vertexes::Vertexes(std::size_t size, const float* positions, std::vector<std::ui
 
 	if (normals) 
 	{
-		for (auto& vert : _verts)
+		for (auto& vert : verts_)
 			vert.norm.x = normals[i], vert.norm.y = normals[i + 1], vert.norm.z = normals[i + 2], i += 3;
 		i = 0;
 	}
 
 	if (textureCoords)
 	{
-		for (auto& vert : _verts)
+		for (auto& vert : verts_)
 			vert.texCoord.x = textureCoords[i], vert.texCoord.y = textureCoords[i + 1], i += 2;
 		i = 0;
 	}
 
 	if (tangent)
 	{
-		for (auto& vert : _verts)
+		for (auto& vert : verts_)
 			vert.aTan.x = tangent[i], vert.aTan.y = tangent[i + 1], vert.aTan.z = tangent[i + 2], i += 3;
 		i = 0;
 	}
 
 	if (bitangent)
 	{
-		for (auto& vert : _verts)
+		for (auto& vert : verts_)
 			vert.aBitan.x = bitangent[i], vert.aBitan.y = bitangent[i + 1], vert.aBitan.z = bitangent[i + 2], i += 3;
 		i = 0;
 	}
@@ -56,7 +57,7 @@ Vertexes::Vertexes(std::size_t size, const float* positions, std::vector<std::ui
 
 Vertex* Vertexes::GetVertexes() 
 {
-	return _verts.data();
+	return verts_.data();
 }
 
 std::vector<std::uint32_t>& Vertexes::GetIndices()
@@ -71,13 +72,13 @@ void Vertexes::AddIndices(std::vector<std::uint32_t>&& inds)
 
 Vertexes::Vertexes(Vertexes&& vecs) 
 {
-	_verts = std::forward<std::vector<Vertex>>(vecs._verts);
+	verts_ = std::forward<std::vector<Vertex>>(vecs.verts_);
 	_indices = std::forward<std::vector<std::uint32_t>>(vecs._indices);
 }
 
 Vertexes&& Vertexes::operator=(Vertexes&& vecs)
 {
-	_verts = std::forward<std::vector<Vertex>>(vecs._verts);
+	verts_ = std::forward<std::vector<Vertex>>(vecs.verts_);
 	_indices = std::forward<std::vector<std::uint32_t>>(vecs._indices);
 
 	return std::forward<Vertexes>(*this);
@@ -85,12 +86,12 @@ Vertexes&& Vertexes::operator=(Vertexes&& vecs)
 
 std::size_t Vertexes::GetSize()
 {
-	return _verts.size();
+	return verts_.size();
 }
 
 BaseTexture::BaseTexture(const std::string& name, const std::string& path, Texture_Types type, std::vector<std::shared_ptr<Image>> images) 
 {
-	SetName(name);
+	setName(name);
 	_path = path;
 	_type = type;
 	_imgs = images;

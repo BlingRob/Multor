@@ -1,5 +1,9 @@
 /// \file RenderEngine.h
+
 #pragma once
+#ifndef RENDERENGINE_H
+#define RENDERENGINE_H
+
 #include <array>
 #include <functional>
 #include "Window.h"
@@ -44,3 +48,5 @@ private:
 };
 
 } // namespace Multor
+
+#endif // RENDERENGINE_H

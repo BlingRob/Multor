@@ -1,16 +1,19 @@
 /// \file Entity.cpp
+/// \brief Class realization of named entity 
+
 #include "Entity.h"
 
 namespace Multor
 {
 
-std::string_view Entity::GetName() const
+std::string_view Entity::getName() const
 {
-	return std::string_view(_name);
+	return std::string_view(name_);
 }
-void Entity::SetName(std::string_view name)
+
+void Entity::setName(std::string_view name)
 {
-	_name = std::string(name);
+	name_ = std::string(name);
 }
 
 } // namespace Multor

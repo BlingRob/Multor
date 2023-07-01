@@ -18,14 +18,17 @@ Application::Application()
 	catch (std::exception err)
 	{
 		_pLog->Log<Logging::File, Logging::Error>(err.what());
+		throw err;
 	}
 	catch (const char* err)
 	{
 		_pLog->Log<Logging::File, Logging::Error>(err);
+		throw err;
 	}
 	catch (std::string err)
 	{
 		_pLog->Log<Logging::File, Logging::Error>(err.c_str());
+		throw err;
 	}
 }
 
@@ -56,14 +59,17 @@ bool Application::MainLoop()
 	catch (std::exception err)
 	{
 		_pLog->Log<Logging::Window, Logging::Error>(err.what());
+		return false;
 	}
 	catch (const char* err)
 	{
 		_pLog->Log<Logging::Window, Logging::Error>(err);
+		return false;
 	}
 	catch (std::string err)
 	{
 		_pLog->Log<Logging::Window, Logging::Error>(err.c_str());
+		return false;
 	}
 }
 

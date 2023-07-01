@@ -1,5 +1,8 @@
 ﻿/// \file VulkanRenderer.h
+
 #pragma once
+#ifndef VULKANRENDERER_H
+#define VULKANRENDERER_H
 
 #include "VkFrameChain.h"
 #include "ImageLoader.h"
@@ -99,3 +102,5 @@ private:
 };
 
 } // namespace Multor
+
+#endif // VULKANRENDERER_H

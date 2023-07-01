@@ -1,5 +1,9 @@
 /// \file VkFrameChain.h
+
 #pragma once
+#ifndef VKFRAMECHAIN_H
+#define VKFRAMECHAIN_H
+
 #include "VkGeneralOptions.h"
 #include "Mesh.h"
 
@@ -56,3 +60,5 @@ protected:
 };
 
 } // namespace Multor
+
+#endif // VKFRAMECHAIN_H

@@ -1,5 +1,8 @@
 /// \file Windows.h
+
 #pragma once
+#ifndef WINDOWS_H
+#define WINDOWS_H
 
 #include "Transformation.h"
 
@@ -63,3 +66,5 @@ private:
 };
 
 } // namespace Multor
+
+#endif // WINDOWS_H

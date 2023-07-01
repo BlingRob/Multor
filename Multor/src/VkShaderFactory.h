@@ -1,4 +1,9 @@
 /// \file VkShaderFactory.h
+
+#pragma once
+#ifndef VKSHADERFACTORY_H
+#define VKSHADERFACTORY_H
+
 #include <vector>
 #include <memory>
 #include <stdexcept>
@@ -31,3 +36,5 @@ private:
 };
 
 } // namespace Multor
+
+#endif // VKSHADERFACTORY_H

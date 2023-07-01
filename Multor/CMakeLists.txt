@@ -35,7 +35,7 @@ if(UNIX)
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 					COMMAND ${CMAKE_COMMAND} -E copy 
 							${VULKAN_SHARED_LIB}
-							${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_BUILD_TYPE}/libvulkan.so
+							${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libvulkan.so
 					COMMENT "Coping shared library file"
 	)
 elseif(WIN32)

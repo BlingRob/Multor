@@ -1,4 +1,9 @@
 /// \file VkGeneralOptions.h
+
+#pragma once
+#ifndef VKGENERALOPTIONS_H
+#define VKGENERALOPTIONS_H
+
 #include "Logger.h"
 #include "Window.h"
 
@@ -97,3 +102,5 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
 									  VkDebugUtilsMessengerEXT* pDebugMessenger);
 
 } // namespace Multor
+
+#endif // VKGENERALOPTIONS_H

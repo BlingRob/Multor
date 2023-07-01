@@ -1,5 +1,9 @@
 /// \file VkCommandExecuter.h
+
 #pragma once
+#ifndef VKCOMMANDEXECUTER_H
+#define VKCOMMANDEXECUTER_H
+
 #include <exception>
 #include <stdexcept>
 
@@ -27,3 +31,5 @@ private:
 };
 
 } // namespace Multor
+
+#endif // VKCOMMANDEXECUTER_H

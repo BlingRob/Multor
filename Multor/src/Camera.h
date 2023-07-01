@@ -1,4 +1,6 @@
 /// \file Camera.h
+
+#pragma once
 #ifndef CAMERA_H
 #define CAMERA_H
 
@@ -11,16 +13,18 @@
 namespace Multor
 {
 
-// Default cameras options
+/// \brief Default cameras options
 const float YAW         = -90.0f;
 const float PITCH       = 0.0f;
 const float SPEED       = 4.0f;
 const float SENSITIVITY = 0.1f;
 const float ZOOM        = 45.0f;
 
-class Camera:public Entity
+/// \brief Class of camera
+class Camera : public Entity
 {
 public:
+    /// \brief Directions of camera movement
     enum class Camera_Movement
     {
         FORWARD,
@@ -28,20 +32,24 @@ public:
         LEFT,
         RIGHT
     };
-    // Camera attributes
+
+    /// \brief Camera attributes
     glm::vec3 Position;
     glm::vec3 Front;
     glm::vec3 Up;
     glm::vec3 Right;
     glm::vec3 WorldUp;
-    // Euler's angels
+
+    /// \brief Euler's angels
     float Yaw;
     float Pitch;
-    // Camera's options
+
+    /// \brief Camera's options
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
-    //Limits
+
+    /// \brief Limits
     static constexpr float PitchLimit    = glm::radians(89.0f);
     static constexpr float ZoomLowLimit  = 1.0f;
     static constexpr float ZoomHighLimit = 45.0f;
@@ -125,6 +133,7 @@ private:
         Up      = glm::cross(Right, Front);
     }
 };
-#endif
 
 } // namespace Multor
+
+#endif

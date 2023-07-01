@@ -1,10 +1,12 @@
 /// \file Shader.h
-#pragma once
 
+#pragma once
 #ifndef SHADER_H
 #define SHADER_H
 
 #include "VkShaderFactory.h"
+
+#include <glm/glm.hpp>
 
 #include <string_view>
 #include <string>
@@ -15,8 +17,6 @@
 #include <type_traits>
 
 //#include <glslang/Include/glslang_c_interface.h>
-
-#include <glm/glm.hpp>
 
 namespace Multor
 {
@@ -40,6 +40,6 @@ private:
 
 };
 
-#endif
-
 } // namespace Multor
+
+#endif // SHADER_H

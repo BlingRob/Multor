@@ -1,5 +1,8 @@
 /// \file VkBufferFactory.h
+
 #pragma once
+#ifndef VKBUFFERFACTORY_H
+#define VKBUFFERFACTORY_H
 
 #include "Material.h"
 #include "VkCommandExecuter.h"
@@ -36,3 +39,5 @@ protected:
 };
 
 } // namespace Multor
+
+#endif // VKBUFFERFACTORY_H

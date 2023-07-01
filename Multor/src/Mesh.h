@@ -1,5 +1,8 @@
 /// \file Mesh.h
+
 #pragma once
+#ifndef MESH_H
+#define MESH_H
 
 #include "Shader.h"
 #include "Material.h"
@@ -43,7 +46,7 @@ struct TransformUBO
         VkDevice _dev;
 };
 
-class BaseMesh: public Entity
+class BaseMesh : public Entity
 {
 public:
     using TexIT = std::vector<std::shared_ptr<BaseTexture>>::iterator;
@@ -89,7 +92,7 @@ struct VkMesh
     std::unique_ptr<TransformUBO> tr;
 };
 
-class VkMeshFactory:public VkTextureFactory
+class VkMeshFactory : public VkTextureFactory
 {
 public:
     VkMeshFactory(VkDevice& dev, VkPhysicalDevice& physDev, std::shared_ptr<CommandExecuter> ex):VkTextureFactory(dev, physDev, std::move(ex)) {}
@@ -98,3 +101,5 @@ public:
 };
 
 } // namespace Multor
+
+#endif // MESH_H

@@ -1,5 +1,9 @@
 /// \file Time.h
+
 #pragma once
+#ifndef TIME_H
+#define TIME_H
+
 #include <chrono>
 
 namespace Multor
@@ -24,3 +28,5 @@ public:
 };
 
 } // namespace Multor
+
+#endif // TIME_H

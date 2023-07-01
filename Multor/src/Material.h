@@ -1,5 +1,8 @@
 /// \file Material.h
+
 #pragma once
+#ifndef MATERIAL_H
+#define MATERIAL_H
 
 #include "Entity.h"
 #include "ImageLoader.h"
@@ -20,17 +23,25 @@ namespace Multor
 class Vertexes
 {
 public:
+
     Vertexes(std::size_t size = 0, const float* positions = nullptr, std::vector<std::uint32_t>&& inds = std::vector<std::uint32_t>(0), const float* normals = nullptr, const float* textureCoords = nullptr, const float* tangent = nullptr, const float* bitangent = nullptr);
+
     Vertexes(Vertexes&&);
+
     Vertexes&& operator=(Vertexes&&);
+
     void AddIndices(std::vector<std::uint32_t>&& inds);
+
     /*Return amount structs vertex numbers*/
     std::size_t GetSize();
+
     std::vector<std::uint32_t>& GetIndices();
+
     Vertex* GetVertexes();
+
 private:
-    std::size_t _size;
-    std::vector<Vertex> _verts;
+    std::size_t size_;
+    std::vector<Vertex> verts_;
     std::vector<std::uint32_t> _indices;
 };
 
@@ -67,3 +78,5 @@ struct Material
 };
 
 } // namespace Multor
+
+#endif // MATERIAL_H

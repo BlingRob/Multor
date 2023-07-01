@@ -1,5 +1,9 @@
 /// \file VkTexture.h
+
 #pragma once
+#ifndef VKTEXTURE_H
+#define VKTEXTURE_H
+
 #include "ImageLoader.h"
 #include "VkBufferFactory.h"
 
@@ -32,3 +36,5 @@ private:
 };
 
 } // namespace Multor
+
+#endif // VKTEXTURE_H

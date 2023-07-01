@@ -1,5 +1,9 @@
 /// \file VulkanObjects.h
+
 #pragma once
+#ifndef VULKANOBJECTS_H
+#define VULKANOBJECTS_H
+
 #include <memory>
 #include <vector>
 #include <array>
@@ -95,3 +99,5 @@ struct VertexBuffer
 };
 
 } // namespace Multor
+
+#endif // VULKANOBJECTS_H

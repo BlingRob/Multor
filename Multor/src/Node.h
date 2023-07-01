@@ -1,5 +1,8 @@
 /// \file Node.h
+
 #pragma once
+#ifndef NODE_H
+#define NODE_H
 
 namespace Multor
 {
@@ -42,3 +45,5 @@ private:
 */
 
 } // namespace Multor
+
+#endif // NODE_H

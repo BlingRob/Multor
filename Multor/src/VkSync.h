@@ -1,5 +1,9 @@
 /// \file VkSync.h
+
 #pragma once
+#ifndef VKSYNC_H
+#define VKSYNC_H
+
 #include <vector>
 #include <stdexcept>
 
@@ -25,3 +29,5 @@ private:
 };
 
 } // namespace Multor
+
+#endif // VKSYNC_H

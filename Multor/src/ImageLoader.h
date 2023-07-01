@@ -1,6 +1,9 @@
 /// @file ImageLoader.h
 /// @brief Texture's loader
+
 #pragma once
+#ifndef IMAGELOADER_H
+#define IMAGELOADER_H
 
 #include "stb_image.h"
 
@@ -17,7 +20,14 @@ struct Image
 {
 	Image() {}
 	Image(Image& img) noexcept = default;
-	Image(Image&& img) noexcept :w(img.w), h(img.h), nrComponents(img.nrComponents) { std::swap(_mdata,img._mdata); std::swap(deleter, img.deleter);}
+	Image(Image&& img) noexcept : 
+			w(img.w),
+			h(img.h),
+			nrComponents(img.nrComponents)
+			{
+				 std::swap(_mdata,img._mdata); std::swap(deleter, img.deleter);
+			}
+
 	Image&& operator= (Image&& img) noexcept
 	{
 		w = img.w;
@@ -28,6 +38,7 @@ struct Image
 
 		return std::move(*this);
 	}
+
 	Image(std::size_t width, std::size_t height, std::uint8_t channel = 4, unsigned char* data = nullptr, PDelFun del = [](void* ptr) {delete static_cast<unsigned char*>(ptr); }) :
 		deleter(del), w(static_cast<int>(width)), h(static_cast<int>(height)), nrComponents(channel)
 		{
@@ -38,16 +49,20 @@ struct Image
 			else
 				_mdata = data;
 		};
-	bool empty() noexcept
+	
+	bool empty() const noexcept 
 	{
 		return !w && !h;
 	}
+
 	~Image()
 	{
 		deleter(_mdata);
 	}
+
 	unsigned char* _mdata;
 	int w, h, nrComponents;
+
 	private:
 		PDelFun deleter;
 };
@@ -58,8 +73,11 @@ struct ImageLoader
 	static std::shared_ptr<Image> LoadTexture(const void* memoryPtr, int width);
 
 private:
+
 	static inline int w, h, chs;
 	static inline PDelFun STB_deleter = [](void* ptr) {stbi_image_free(ptr); };
 };
 
 } // namespace Multor
+
+#endif // IMAGELOADER_H

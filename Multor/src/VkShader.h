@@ -1,5 +1,9 @@
 /// \file VkShader.h
+
 #pragma once
+#ifndef VKSHADER_H
+#define VKSHADER_H
+
 #include <vector>
 #include <memory>
 #include <set>
@@ -84,3 +88,5 @@ private:
 };
 
 } // namespace Multor
+
+#endif // VKSHADER_H

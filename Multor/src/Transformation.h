@@ -1,5 +1,9 @@
 /// \file Transformation.h
+
 #pragma once
+#ifndef TRANSFORMATION_H
+#define TRANSFORMATION_H
+
 #include "Shader.h"
 #include "Camera.h"
 
@@ -73,3 +77,5 @@ class Transformation_interface
 };
 
 } // namespace Multor
+
+#endif // TRANSFORMATION_H

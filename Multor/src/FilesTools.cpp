@@ -4,18 +4,6 @@
 namespace Multor
 {
 
-bool FileIsExist(std::string_view filePath)
-{
-    bool isExist = false;
-    std::ifstream fin(filePath.data());
-
-    if (fin.is_open())
-        isExist = true;
-
-    fin.close();
-    return isExist;
-}
-
 std::string LoadTextFile(std::string_view path)
 {
     std::ifstream file;
@@ -26,7 +14,7 @@ std::string LoadTextFile(std::string_view path)
     {
         file.open(path.data(), std::ios::binary | std::ios::ate);
     }
-    catch (std::exception exc)
+    catch (const std::exception& exc)
     {
         throw(std::string(exc.what()) + "\n File:" + std::string(path) + " doesn't exist!");
     }
@@ -36,9 +24,10 @@ std::string LoadTextFile(std::string_view path)
     
     std::streamsize fileSize = file.tellg();
     file.seekg(0);
-    std::string Text(fileSize + 1, '\0');
-    file.read(&Text[0], fileSize);
-    return Text;
+    std::string text(fileSize + 1, '\0');
+    file.read(&text[0], fileSize);
+
+    return text;
 }
 
 } // namespace Multor

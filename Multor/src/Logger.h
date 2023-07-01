@@ -1,5 +1,7 @@
 /// \file Logger.h
 #pragma once
+#ifndef LOGGER_H
+#define LOGGER_H
 
 #include <string>
 #include <iostream>
@@ -21,7 +23,7 @@ struct Info : LogTypes
 {
 	static uint32_t const value = 0;
 	static uint32_t const SDLvalue = SDL_MESSAGEBOX_INFORMATION;
-	static inline char* const name = "Info";
+	static inline char const name[] = "Info";
 };
 
 /// @brief Debug (warning) message type
@@ -29,7 +31,7 @@ struct Debug : LogTypes
 {
 	static uint32_t const value = 1;
 	static uint32_t const SDLvalue = SDL_MESSAGEBOX_WARNING;
-	static inline char* const name = "Debug";
+	static inline char const name[] = "Debug";
 };
 
 /// @brief Error message type
@@ -37,7 +39,7 @@ struct Error : LogTypes
 {
 	static uint32_t const value = 2;
 	static uint32_t const SDLvalue = SDL_MESSAGEBOX_ERROR;
-	static inline char* const name = "Error";
+	static inline char const name[] = "Error";
 };
 
 /// @brief Base type logging output target
@@ -69,7 +71,7 @@ public:
 	/// @tparam OutT target of output
 	/// @tparam LogT logging type  
 	/// @param msg message
-	template<typename OutT, typename LogT, typename = std::enable_if_t<std::is_base_of_v<LogTypes, typename LogT>  && std::is_base_of_v<OutputTarget, OutT>>>
+	template<typename OutT, typename LogT, typename = std::enable_if_t<std::is_base_of_v<LogTypes, LogT>  && std::is_base_of_v<OutputTarget, OutT>>>
 	void Log(const char* msg)
 	{
 		log<OutT, LogT>(msg);
@@ -109,3 +111,5 @@ private:
 
 } // namespace Logging
 } // namespace Multor
+
+#endif // LOGGER_H
