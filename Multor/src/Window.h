@@ -24,45 +24,46 @@ namespace Multor
 class Window
 {
 public:
-	Window(std::array<std::function<void(void*)>, 5>* sigs, std::shared_ptr<Position_Controller> contr);
+    Window(std::array<std::function<void(void*)>, 5>* sigs,
+           std::shared_ptr<Position_Controller>       contr);
 
-	std::shared_ptr<SDL_Window> GetWindow()
-	{
-		return _pWindow;
-	}
+    std::shared_ptr<SDL_Window> GetWindow()
+    {
+        return pWindow_;
+    }
 
-	bool ProcEvents();
-	void SwapBuffer();
-	SDL_Window* GetWindow() const;
-	std::pair<int32_t, int32_t> MaxSize() const;
-	//Window(std::shared_ptr<Position_Controller>);
+    bool                        ProcEvents();
+    void                        SwapBuffer();
+    SDL_Window*                 GetWindow() const;
+    std::pair<int32_t, int32_t> MaxSize() const;
+    //Window(std::shared_ptr<Position_Controller>);
 
-	//Size of window
-	uint32_t SCR_WIDTH = 800,
-		SCR_HEIGHT = 800;
+    //Size of window
+    uint32_t SCR_WIDTH = 800, SCR_HEIGHT = 800;
 
-	~Window();
+    ~Window();
+
 private:
-	//window
-	std::shared_ptr<SDL_Window> _pWindow;
-	//Signals
-	std::array<std::function<void(void*)>, 5>* _pSigTable;
-	bool InitVulkanContext();
+    //window
+    std::shared_ptr<SDL_Window> pWindow_;
+    //Signals
+    std::array<std::function<void(void*)>, 5>* pSigTable_;
+    bool                                       InitVulkanContext();
 
-	//queue of pressed keys
-	bool keys[1024] = { false };
+    //queue of pressed keys_
+    bool keys_[1024] = {false};
 
-	//mouse controll
-	float lastX, lastY;
-	bool clicked, firstMouse;
-	bool ChangedProj = false;
-	bool ChangedView = false;
-	//callbacks
-	inline void do_movement();
-	inline void change_matrixes();
+    //mouse controll
+    float lastX_, lastY_;
+    bool  clicked_, firstMouse_;
+    bool  changedProj_ = false;
+    bool  changedView_ = false;
+    //callbacks
+    inline void do_movement();
+    inline void change_matrixes();
 
-	//Data for connect with render engine
-	std::shared_ptr<Position_Controller> _pContr;
+    //Data for connect with render engine
+    std::shared_ptr<Position_Controller> pContr_;
 };
 
 } // namespace Multor

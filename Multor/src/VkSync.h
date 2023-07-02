@@ -11,21 +11,20 @@
 
 namespace Multor
 {
-	
-class VkSyncer 
+
+class VkSyncer
 {
 public:
+    VkSyncer(VkDevice& device);
+    ~VkSyncer();
 
-	VkSyncer(VkDevice& device);
-	~VkSyncer();
-
-	VkSemaphore imageAvailableSemaphores;
-	VkSemaphore renderFinishedSemaphores;
-	VkFence inFlightFences;
-	VkFence imagesInFlight;
+    VkSemaphore imageAvailableSemaphores;
+    VkSemaphore renderFinishedSemaphores;
+    VkFence     inFlightFences;
+    VkFence     imagesInFlight;
 
 private:
-	VkDevice m_device;
+    VkDevice m_device;
 };
 
 } // namespace Multor

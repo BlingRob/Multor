@@ -14,18 +14,18 @@ namespace Multor
 
 void Transformation::SetTransform(const std::shared_ptr<glm::mat4> matr)
 {
-	Model = *matr;
-	updateNormal();
+    Model = *matr;
+    updateNormal();
 }
 
 void Transformation::SetTransform(const glm::mat4& matr)
 {
-	Model = matr;
-	updateNormal();
+    Model = matr;
+    updateNormal();
 }
 glm::mat4 Transformation::GetTransform() const
 {
-	return Model;
+    return Model;
 }
 
 /*void Transformation::SendToShader(const Shader& shader)
@@ -35,25 +35,25 @@ glm::mat4 Transformation::GetTransform() const
 	shader.setMat("NormalMatrix", NormalMatrix);
 }*/
 
-void Transformation::Translate(const glm::vec3& trans) 
+void Transformation::Translate(const glm::vec3& trans)
 {
-	Model = glm::translate(Model, trans);
-	updateNormal();
+    Model = glm::translate(Model, trans);
+    updateNormal();
 }
 
 void Transformation::Rotate(float alph, const glm::vec3& axes)
 {
-	Model = glm::rotate(Model, alph, axes);
-	updateNormal();
+    Model = glm::rotate(Model, alph, axes);
+    updateNormal();
 }
-void Transformation::Scale(const glm::vec3& coefs) 
+void Transformation::Scale(const glm::vec3& coefs)
 {
-	Model = glm::scale(Model, coefs);
-	updateNormal();
+    Model = glm::scale(Model, coefs);
+    updateNormal();
 }
-void Transformation::updateNormal() 
+void Transformation::updateNormal()
 {
-	NormalMatrix = glm::mat3(glm::transpose(glm::inverse(Model)));
+    NormalMatrix = glm::mat3(glm::transpose(glm::inverse(Model)));
 }
 
 /*void Position_Controller::SendToShader(const Shader& shader)

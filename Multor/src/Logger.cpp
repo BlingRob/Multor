@@ -10,16 +10,17 @@ namespace Multor
 namespace Logging
 {
 
-Logger::Logger(SDL_Window* pWin) :_pWindow(pWin)
+Logger::Logger(SDL_Window* pWin) : pWindow_(pWin)
 {
-	_sFileOutBuffer.open(Multor::LogFileName, std::ios::out);
-	if(!_sFileOutBuffer.is_open())
-		throw std::runtime_error("Logging system can't work without file ouput!");
+    sFileOutBuffer_.open(Multor::LogFileName, std::ios::out);
+    if (!sFileOutBuffer_.is_open())
+        throw std::runtime_error(
+            "Logging system can't work without file ouput!");
 }
 
-Logger::~Logger() 
+Logger::~Logger()
 {
-	_sFileOutBuffer.close();
+    sFileOutBuffer_.close();
 }
 
 } // namespace Logging

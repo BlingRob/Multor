@@ -16,6 +16,13 @@ cmake --build .
 
 If CMAKE_BUILD_TYPE wasn't setted, use Debug configuration.
 
+## Format
+
+Change directory on Multor/src and use next command (llvm should be installed):
+```
+clang-format -style=file -i *.cpp *.h 
+```
+
 ## Dependencies
 
 All dependencies will be loaded as submodules. Note bene: dependencies demand a lot of addition libraries and drivers. Their installation falls on the user's shoulders. I was really hoping to free the project from manually installing dependencies, but Vulkan is too complicated for that.

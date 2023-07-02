@@ -7,8 +7,8 @@
 
 namespace Multor
 {
-    /// \brief Name of logging file
-    const char* LogFileName = "Log.txt";
+/// \brief Name of logging file
+const char* LogFileName = "Log.txt";
 };
 
 #endif // CONFIGURE_H

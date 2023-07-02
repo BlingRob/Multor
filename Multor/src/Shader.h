@@ -24,20 +24,20 @@ namespace Multor
 class Shader
 {
 public:
-	void setScal(std::string_view, float) const;
-	void setScal(std::string_view, int) const;
-	void setScal(std::string_view, bool) const;
-	void setScal(std::string_view, uint64_t) const;
+    void setScal(std::string_view, float) const;
+    void setScal(std::string_view, int) const;
+    void setScal(std::string_view, bool) const;
+    void setScal(std::string_view, uint64_t) const;
 
-	void setVec(std::string_view, const glm::vec2&) const;
-	void setVec(std::string_view, const glm::vec3&) const;
-	void setVec(std::string_view, const glm::vec4&) const;
+    void setVec(std::string_view, const glm::vec2&) const;
+    void setVec(std::string_view, const glm::vec3&) const;
+    void setVec(std::string_view, const glm::vec4&) const;
 
-	void setMat(std::string_view, const glm::mat2&) const;
-	void setMat(std::string_view, const glm::mat3&) const;
-	void setMat(std::string_view, const glm::mat4&) const;
+    void setMat(std::string_view, const glm::mat2&) const;
+    void setMat(std::string_view, const glm::mat3&) const;
+    void setMat(std::string_view, const glm::mat4&) const;
+
 private:
-
 };
 
 } // namespace Multor

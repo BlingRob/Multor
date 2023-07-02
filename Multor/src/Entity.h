@@ -1,5 +1,5 @@
 /// \file Entity.h
-/// \brief Class interface of named entity 
+/// \brief Class interface of named entity
 
 #pragma once
 #ifndef ENTITY_H
@@ -13,18 +13,16 @@ namespace Multor
 
 class Entity
 {
-	public:
-        
-        /// \brief Name getter
-        std::string_view getName() const;
+public:
+    /// \brief Name getter
+    std::string_view getName() const;
 
-        /// \brief Name setter
-        void setName(std::string_view name);
+    /// \brief Name setter
+    void setName(std::string_view name);
 
-        private:
-
-        /// \brief Name
-        std::string name_;
+private:
+    /// \brief Name
+    std::string name_;
 };
 
 } // namespace Multor

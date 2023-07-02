@@ -6,14 +6,14 @@ namespace Multor
 
 VkTexture::~VkTexture()
 {
-	vkDestroySampler(_dev, _sampler, nullptr);
-	vkDestroyImageView(_dev, _view, nullptr);
-	vkDestroyImage(_dev, _img, nullptr);
-	vkFreeMemory(_dev, _devMem, nullptr);
-	_sampler = VK_NULL_HANDLE; 
-	_view = VK_NULL_HANDLE;
-	_img = VK_NULL_HANDLE;
-	_devMem = VK_NULL_HANDLE;
+    vkDestroySampler(dev_, sampler_, nullptr);
+    vkDestroyImageView(dev_, view_, nullptr);
+    vkDestroyImage(dev_, img_, nullptr);
+    vkFreeMemory(dev_, devMem_, nullptr);
+    sampler_ = VK_NULL_HANDLE;
+    view_    = VK_NULL_HANDLE;
+    img_     = VK_NULL_HANDLE;
+    devMem_  = VK_NULL_HANDLE;
 }
 
 } // namespace Multor

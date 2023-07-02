@@ -1,4 +1,4 @@
-/// @file ImageLoader.h
+/// @file ImageLoader.h_
 /// @brief Texture's loader
 
 #pragma once
@@ -14,68 +14,76 @@
 namespace Multor
 {
 
-using PDelFun = void(*)(void*);
+using PDelFun = void (*)(void*);
 
 struct Image
 {
-	Image() {}
-	Image(Image& img) noexcept = default;
-	Image(Image&& img) noexcept : 
-			w(img.w),
-			h(img.h),
-			nrComponents(img.nrComponents)
-			{
-				 std::swap(_mdata,img._mdata); std::swap(deleter, img.deleter);
-			}
+    Image()
+    {
+    }
+    Image(Image& img) noexcept = default;
+    Image(Image&& img) noexcept : w_(img.w_),
+                                  h_(img.h_),
+                                  nrComponents_(img.nrComponents_)
+    {
+        std::swap(mdata_, img.mdata_);
+        std::swap(deleter_, img.deleter_);
+    }
 
-	Image&& operator= (Image&& img) noexcept
-	{
-		w = img.w;
-		h = img.h;
-		nrComponents = img.nrComponents;
-		std::swap(_mdata, img._mdata);
-		std::swap(deleter, img.deleter);
+    Image&& operator=(Image&& img) noexcept
+    {
+        w_            = img.w_;
+        h_            = img.h_;
+        nrComponents_ = img.nrComponents_;
+        std::swap(mdata_, img.mdata_);
+        std::swap(deleter_, img.deleter_);
 
-		return std::move(*this);
-	}
+        return std::move(*this);
+    }
 
-	Image(std::size_t width, std::size_t height, std::uint8_t channel = 4, unsigned char* data = nullptr, PDelFun del = [](void* ptr) {delete static_cast<unsigned char*>(ptr); }) :
-		deleter(del), w(static_cast<int>(width)), h(static_cast<int>(height)), nrComponents(channel)
-		{
-		//texture load option
-		//stbi_set_flip_vertically_on_load(true);
-			if (data == nullptr)
-				_mdata = new unsigned char[width * height * channel];
-			else
-				_mdata = data;
-		};
-	
-	bool empty() const noexcept 
-	{
-		return !w && !h;
-	}
+    Image(
+        std::size_t width, std::size_t height, std::uint8_t channel = 4,
+        unsigned char* data = nullptr,
+        PDelFun        del =
+            [](void* ptr) { delete static_cast<unsigned char*>(ptr); })
+        : deleter_(del),
+          w_(static_cast<int>(width)),
+          h_(static_cast<int>(height)),
+          nrComponents_(channel)
+    {
+        //texture load option
+        //stbi_set_flip_vertically_on_load(true);
+        if (data == nullptr)
+            mdata_ = new unsigned char[width * height * channel];
+        else
+            mdata_ = data;
+    };
 
-	~Image()
-	{
-		deleter(_mdata);
-	}
+    bool empty() const noexcept
+    {
+        return !w_ && !h_;
+    }
 
-	unsigned char* _mdata;
-	int w, h, nrComponents;
+    ~Image()
+    {
+        deleter_(mdata_);
+    }
 
-	private:
-		PDelFun deleter;
+    unsigned char* mdata_;
+    int            w_, h_, nrComponents_;
+
+private:
+    PDelFun deleter_;
 };
 
 struct ImageLoader
 {
-	static std::shared_ptr<Image> LoadTexture(const char* path);
-	static std::shared_ptr<Image> LoadTexture(const void* memoryPtr, int width);
+    static std::shared_ptr<Image> LoadTexture(const char* path);
+    static std::shared_ptr<Image> LoadTexture(const void* memoryPtr, int width);
 
 private:
-
-	static inline int w, h, chs;
-	static inline PDelFun STB_deleter = [](void* ptr) {stbi_image_free(ptr); };
+    static inline int     w_, h_, chs_;
+    static inline PDelFun STB_deleter = [](void* ptr) { stbi_image_free(ptr); };
 };
 
 } // namespace Multor

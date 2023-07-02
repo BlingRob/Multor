@@ -54,13 +54,17 @@ public:
     static constexpr float ZoomLowLimit  = 1.0f;
     static constexpr float ZoomHighLimit = 45.0f;
 
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH): MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
+           glm::vec3 target   = glm::vec3(0.0f, 0.0f, 0.0f),
+           glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW,
+           float pitch = PITCH)
+        : MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
     {
         Position = position;
-        Front = target;
-        WorldUp = glm::normalize(up);
-        Yaw = glm::radians(yaw);
-        Pitch = glm::radians(pitch);
+        Front    = target;
+        WorldUp  = glm::normalize(up);
+        Yaw      = glm::radians(yaw);
+        Pitch    = glm::radians(pitch);
         updateCameraVectors();
     }
 
@@ -73,35 +77,36 @@ public:
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
         float velocity = MovementSpeed * deltaTime;
-        switch (direction) 
-        {
-            case Camera_Movement::FORWARD:
-                Position += Front * velocity;
-            break;
-            case Camera_Movement::BACKWARD:
-                Position -= Front * velocity;
-            break;
-            case Camera_Movement::LEFT:
-                Position -= Right * velocity;
-            break;
-            case Camera_Movement::RIGHT:
-                Position += Right * velocity;
-            break;
-        }
+        switch (direction)
+            {
+                case Camera_Movement::FORWARD:
+                    Position += Front * velocity;
+                    break;
+                case Camera_Movement::BACKWARD:
+                    Position -= Front * velocity;
+                    break;
+                case Camera_Movement::LEFT:
+                    Position -= Right * velocity;
+                    break;
+                case Camera_Movement::RIGHT:
+                    Position += Right * velocity;
+                    break;
+            }
     }
 
     // Process mouse movement
-    void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true)
+    void ProcessMouseMovement(float xoffset, float yoffset,
+                              bool constrainPitch = true)
     {
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
 
-        Yaw   += glm::radians(xoffset);
+        Yaw += glm::radians(xoffset);
         Pitch += glm::radians(yoffset);
 
         // Controll pitch range
         if (constrainPitch)
-            if(glm::abs(Pitch) > PitchLimit)
+            if (glm::abs(Pitch) > PitchLimit)
                 Pitch = std::copysignf(PitchLimit, Pitch);
 
         // Update vectors
@@ -129,8 +134,8 @@ private:
         Front.z = sin(Yaw) * cos(Pitch);
         Front   = glm::normalize(Front);
         // Reculculation right and up vectors
-        Right   = glm::cross(Front, WorldUp);
-        Up      = glm::cross(Right, Front);
+        Right = glm::cross(Front, WorldUp);
+        Up    = glm::cross(Right, Front);
     }
 };
 
