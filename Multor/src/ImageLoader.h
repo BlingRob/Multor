@@ -7,6 +7,7 @@
 
 #include "stb_image.h"
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <string_view>
