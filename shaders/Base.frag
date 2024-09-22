@@ -44,6 +44,6 @@ void main()
     //vec3 viewDir   = normalize(vs_out.TangentViewPos - vs_out.TangentFragPos);
 	//FragColor = texture(diffuse, vs_out.TexCoords);
 	//FragColor = vec4(vs_out.FragPos,1.0);
-	FragColor = vec4(0.0f,1.0f,0.0f,1.0f);
+	FragColor = vec4(0.5f, 0.5f,0.0f,1.0f);
 }
 

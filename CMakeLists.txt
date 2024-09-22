@@ -1,6 +1,5 @@
 ﻿cmake_minimum_required (VERSION 3.10)
 
-project (Multor)
 set(CMAKE_CXX_STANDARD 17)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
@@ -16,4 +15,6 @@ elseif(UNIX)
 endif()
 
 add_subdirectory(dependencies)
-add_subdirectory(Multor)
+
+include_directories(${CMAKE_SOURCE_DIR}/scr)
+add_subdirectory(src)
