@@ -1,8 +1,33 @@
-/// \file VkFrameChain.cpp
-#include "VkFrameChain.h"
+/// \file frame_chain.cpp
 
-namespace Multor
+#include "frame_chain.h"
+
+namespace Multor::Vulkan
 {
+
+FrameChain::FrameChain(std::shared_ptr<Window> pWnd)
+    : BaseStructs(std::move(pWnd)),
+      logger_(Logging::LoggerFactory::GetLogger("vulkan.log"))
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
+    _executer =
+        std::make_shared<CommandExecuter>(device, commandPool, graphicsQueue);
+    MeshFac = std::make_unique<MeshFactory>(device, physicDev, _executer);
+    createSwapChain();
+    createImageViews();
+    createRenderPass();
+    DepthImg = MeshFac->createDepthTexture(swapChainExtent.width,
+                                           swapChainExtent.height);
+    createFramebuffers();
+}
+
+FrameChain::~FrameChain()
+{
+    MeshFac.reset();
+    _executer.reset();
+    CleanUpSwapChain();
+}
 
 VkPresentModeKHR chooseSwapPresentMode(
     const std::vector<VkPresentModeKHR>& availablePresentModes)
@@ -50,6 +75,8 @@ VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 
 void FrameChain::createSwapChain()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     //Looking for physical device parametrs - formats
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport();
     //Choose needing surface format
@@ -112,6 +139,8 @@ void FrameChain::createSwapChain()
 
 void FrameChain::createImageViews()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     swapChainImageViews.resize(swapChainImages.size());
     for (size_t i = 0; i < swapChainImages.size(); ++i)
         //Create "descriptor" of window's buffer images
@@ -122,6 +151,8 @@ void FrameChain::createImageViews()
 
 void FrameChain::createRenderPass()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     //Options for output images
     VkAttachmentDescription colorAttachment {};
     colorAttachment.format         = swapChainImageFormat;
@@ -191,6 +222,8 @@ void FrameChain::createRenderPass()
 
 void FrameChain::createFramebuffers()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     swapChainFramebuffers.resize(swapChainImageViews.size());
     //bind and create framebuffer
     for (std::size_t i = 0; i < swapChainImageViews.size(); ++i)
@@ -217,6 +250,8 @@ void FrameChain::createFramebuffers()
 
 void FrameChain::CleanUpSwapChain()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     vkDeviceWaitIdle(device);
 
     DepthImg.reset();
@@ -237,6 +272,8 @@ void FrameChain::CleanUpSwapChain()
 
 void FrameChain::RecreateSwapChain()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     vkDeviceWaitIdle(device);
 
     CleanUpSwapChain();
@@ -249,4 +286,4 @@ void FrameChain::RecreateSwapChain()
     createFramebuffers();
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

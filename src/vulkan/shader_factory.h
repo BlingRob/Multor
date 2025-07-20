@@ -1,26 +1,24 @@
-/// \file vk_shader_factory.h.h
+/// \file shader_factory.h.h
 
 #pragma once
-#ifndef VK_SHADER_FACTORY_H
-#define VK_SHADER_FACTORY_H
 
 #include <vector>
 #include <memory>
 #include <stdexcept>
 
-#include "VkShader.h"
+#include "shader.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-class VkShaderFactory
+class ShaderFactory
 {
 public:
-    VkShaderFactory(VkDevice& device);
+    ShaderFactory(VkDevice& device);
     std::shared_ptr<ShaderLayout> createShader(std::string_view vertex,
                                                std::string_view fragment,
                                                std::string_view geometry = "");
-    ~VkShaderFactory();
+    ~ShaderFactory();
 
 private:
     VkDevice         _device;
@@ -39,6 +37,4 @@ private:
     void InitResource();
 };
 
-} // namespace Multor
-
-#endif // VK_SHADER_FACTORY_H
+} // namespace Multor::Vulkan

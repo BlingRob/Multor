@@ -1,19 +1,17 @@
-/// \file vk_sync.h
+/// \file syncer.h
 
 #pragma once
-#ifndef VK_SYNC_H
-#define VK_SYNC_H
 
 #include <vulkan/vulkan.h>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-class VkSyncer
+class Syncer
 {
 public:
-    VkSyncer(VkDevice& device);
-    ~VkSyncer();
+    Syncer(VkDevice& device);
+    ~Syncer();
 
     VkSemaphore imageAvailableSemaphores;
     VkSemaphore renderFinishedSemaphores;
@@ -24,6 +22,4 @@ private:
     VkDevice m_device;
 };
 
-} // namespace Multor
-
-#endif // VK_SYNC_H
+} // namespace Multor::Vulkan

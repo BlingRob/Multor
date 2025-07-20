@@ -1,7 +1,10 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
 project (Multor)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
+
+find_package(quill REQUIRED CONFIG)
+find_package(tomlplusplus REQUIRED CONFIG)
 
 #Searching sourse files
 file(GLOB_RECURSE SOURCE_FILES
@@ -23,7 +26,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gui)
 ##########################Vulkan###########################
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vulkan)
 include_directories(${VULKAN_SDK_INCLUDE_DIR})
-message(;rolijgdogjero;gjreorej ${CMAKE_BINARY_DIR}/dependencies/VulkanSDK)
 include_directories(${CMAKE_BINARY_DIR}/dependencies/VulkanSDK)
 
 if(WIN32)
@@ -33,4 +35,4 @@ else()
 endif()
 
 # Define the link libraries
-target_link_libraries(${PROJECT_NAME} ${LIBS} vulkan_subsystem)
+target_link_libraries(${PROJECT_NAME} ${LIBS} vulkan_subsystem quill::quill tomlplusplus::tomlplusplus)

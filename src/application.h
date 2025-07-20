@@ -1,18 +1,22 @@
-/// \file RenderEngine.h
+/// \file render_engine.h
 
 #pragma once
 #ifndef RENDERENGINE_H
 #define RENDERENGINE_H
 
-#include "vulkan/VulkanRenderer.h"
+#include "vulkan/renderer.h"
 
 #include "gui/Window.h"
-#include "Transformation.h"
+#include "transformation.h"
 #include "utils/Time.h"
-#include "utils/Logger.h"
+#include "logger/logger.h"
+#include "configure.h"
 
 #include <array>
 #include <functional>
+#include <string>
+
+#include <toml.hpp>
 
 namespace Multor
 {
@@ -21,27 +25,31 @@ class Application
 {
 public:
     Application();
-    //~Application();
+    ~Application();
 
     bool                            MainLoop();
     double                          GetTime();
-    std::shared_ptr<VulkanRenderer> GetRenderer();
+    std::shared_ptr<Vulkan::Renderer> GetRenderer();
     //void SetScen(std::unique_ptr<Scene>);
     //Scene* GetScen() const;
+
 private:
+
+    toml::table table_;
+
+    /// @brief Controller
     std::shared_ptr<Position_Controller> pContr_;
     //Pointer of window class
     std::shared_ptr<Window> pWindow_;
     //Vulkan
-    std::shared_ptr<VulkanRenderer> _pRenderer;
+    std::shared_ptr<Vulkan::Renderer> _pRenderer;
     //Scene
     //std::shared_ptr<std::unique_ptr<Scene>> _ppScene;
     //Time
     Chronometr chron;
     //GUI
     //std::unique_ptr<GUI> gui;
-    //Logger
-    std::shared_ptr<Logging::Logger> _pLog;
+
     //Resource manager
     //std::unique_ptr<ResourceManager> _pResMgr;
 

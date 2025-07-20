@@ -1,7 +1,7 @@
 /// \file Entity.cpp
 /// \brief Class realization of named entity
 
-#include "Entity.h"
+#include "entity.h"
 
 namespace Multor
 {

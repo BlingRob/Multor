@@ -1,10 +1,8 @@
-/// \file VkGeneralOptions.h
+/// \file general_options.h
 
 #pragma once
-#ifndef VKGENERALOPTIONS_H
-#define VKGENERALOPTIONS_H
 
-#include "../utils/Logger.h"
+#include "../logger/logger.h"
 #include "../gui/Window.h"
 
 #include <vector>
@@ -15,7 +13,7 @@
 
 #include <vulkan/vulkan.h>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
 #ifdef NDEBUG
@@ -48,13 +46,14 @@ struct SwapChainSupportDetails
     std::vector<VkPresentModeKHR>   presentModes;
 };
 
-struct VkBaseStructs
+struct BaseStructs
 {
-    VkBaseStructs(std::shared_ptr<Window>          pWnd,
-                  std::shared_ptr<Logging::Logger> pLog);
-    ~VkBaseStructs();
+    BaseStructs(std::shared_ptr<Window>          pWnd);
+    ~BaseStructs();
 
 protected:
+
+    Logging::Logger& logger_;
 
     VkInstance               instance;
     VkDebugUtilsMessengerEXT debugMessenger;
@@ -66,7 +65,6 @@ protected:
     VkSurfaceKHR             surface;
 
     std::shared_ptr<Window>          _pWnd;
-    std::shared_ptr<Logging::Logger> _pLogger;
 
     SwapChainSupportDetails querySwapChainSupport();
 
@@ -98,6 +96,4 @@ VkResult CreateDebugUtilsMessengerEXT(
     const VkAllocationCallbacks* pAllocator,
     VkDebugUtilsMessengerEXT*    pDebugMessenger);
 
-} // namespace Multor
-
-#endif // VKGENERALOPTIONS_H
+} // namespace Multor::Vulkan

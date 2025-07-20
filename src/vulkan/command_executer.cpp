@@ -1,8 +1,8 @@
-/// \file vk_command_executer.cpp
+/// \file command_executer.cpp
 
-#include "vk_command_executer.h"
+#include "command_executer.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
 void CommandExecuter::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
@@ -140,4 +140,4 @@ void CommandExecuter::endSingleTimeCommands(VkCommandBuffer commandBuffer)
     vkFreeCommandBuffers(dev_, pool_, 1, &commandBuffer);
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

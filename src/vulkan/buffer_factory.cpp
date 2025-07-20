@@ -1,13 +1,13 @@
-/// \file vk_buffer_factory.cpp
+/// \file buffer_factory.cpp
 
-#include "vk_buffer_factory.h"
+#include "buffer_factory.h"
 
-#include "objects/vk_vertex.h"
+#include "objects/vertex.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-uint32_t VkBufferFactory::findMemoryType(uint32_t              typeFilter,
+uint32_t BufferFactory::findMemoryType(uint32_t              typeFilter,
                                          VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -22,11 +22,11 @@ uint32_t VkBufferFactory::findMemoryType(uint32_t              typeFilter,
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-std::unique_ptr<VulkanBuffer>
-VkBufferFactory::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
+std::unique_ptr<Buffer>
+BufferFactory::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                               VkMemoryPropertyFlags properties)
 {
-    std::unique_ptr<VulkanBuffer> buf = std::make_unique<VulkanBuffer>();
+    std::unique_ptr<Buffer> buf = std::make_unique<Buffer>();
     VkBufferCreateInfo            bufferInfo {};
     bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.pNext       = nullptr;
@@ -57,11 +57,11 @@ VkBufferFactory::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 }
 
 std::unique_ptr<VertexBuffer>
-VkBufferFactory::createVertexBuffer(Vertexes* vert)
+BufferFactory::createVertexBuffer(Vertexes* vert)
 {
     VkDeviceSize bufferSize = sizeof(Vertex) * vert->GetSize();
 
-    std::unique_ptr<VulkanBuffer> stBuf =
+    std::unique_ptr<Buffer> stBuf =
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -71,7 +71,7 @@ VkBufferFactory::createVertexBuffer(Vertexes* vert)
     std::memcpy(data, vert->GetVertexes(), bufferSize);
     vkUnmapMemory(dev_, stBuf->bufferMemory_);
 
-    std::unique_ptr<VulkanBuffer> vertBuf = createBuffer(
+    std::unique_ptr<Buffer> vertBuf = createBuffer(
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -79,15 +79,15 @@ VkBufferFactory::createVertexBuffer(Vertexes* vert)
     _executer->copyBuffer(stBuf->buffer_, vertBuf->buffer_, bufferSize);
 
     return std::unique_ptr<VertexBuffer>(
-        new VertexBuffer({std::move(vertBuf), VkVertex::getBindingDescription(),
-                          VkVertex::getAttributeDescriptions()}));
+        new VertexBuffer({std::move(vertBuf), Vertex::getBindingDescription(),
+                          Vertex::getAttributeDescriptions()}));
 }
 
-std::unique_ptr<VulkanBuffer> VkBufferFactory::createIndexBuffer(Vertexes* vert)
+std::unique_ptr<Buffer> BufferFactory::createIndexBuffer(Vertexes* vert)
 {
     VkDeviceSize bufferSize = sizeof(uint32_t) * vert->GetIndices().size();
 
-    std::unique_ptr<VulkanBuffer> stBuf =
+    std::unique_ptr<Buffer> stBuf =
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -97,7 +97,7 @@ std::unique_ptr<VulkanBuffer> VkBufferFactory::createIndexBuffer(Vertexes* vert)
     std::memcpy(data, vert->GetIndices().data(), bufferSize);
     vkUnmapMemory(dev_, stBuf->bufferMemory_);
 
-    std::unique_ptr<VulkanBuffer> IndexBuf = createBuffer(
+    std::unique_ptr<Buffer> IndexBuf = createBuffer(
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -106,20 +106,20 @@ std::unique_ptr<VulkanBuffer> VkBufferFactory::createIndexBuffer(Vertexes* vert)
     return IndexBuf;
 }
 
-std::unique_ptr<VulkanBuffer>
-VkBufferFactory::createUniformBuffer(VkDeviceSize bufferSize)
+std::unique_ptr<Buffer>
+BufferFactory::createUniformBuffer(VkDeviceSize bufferSize)
 {
     return createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
-std::unique_ptr<VulkanBuffer>
-VkBufferFactory::createMaterialBuffer(Material* mat)
+std::unique_ptr<Buffer>
+BufferFactory::createMaterialBuffer(Material* mat)
 {
     VkDeviceSize bufferSize = sizeof(*mat);
 
-    std::unique_ptr<VulkanBuffer> stBuf =
+    std::unique_ptr<Buffer> stBuf =
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -129,7 +129,7 @@ VkBufferFactory::createMaterialBuffer(Material* mat)
     std::memcpy(data, mat, sizeof(*mat));
     vkUnmapMemory(dev_, stBuf->bufferMemory_);
 
-    std::unique_ptr<VulkanBuffer> materialBuf = createBuffer(
+    std::unique_ptr<Buffer> materialBuf = createBuffer(
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -138,4 +138,4 @@ VkBufferFactory::createMaterialBuffer(Material* mat)
     return materialBuf;
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

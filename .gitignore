@@ -5,7 +5,6 @@
 *.pdb
 *.exp
 /build/
-/build*
 /develop
 /dependencies/assimp
 /dependencies/glm
@@ -13,3 +12,4 @@
 /dependencies/imgui-filebrowser
 /dependencies/sdl
 /dependencies/stb
+CMakeUserPresets.json

@@ -1,11 +1,11 @@
 /// \file vk_texture.cpp
 
-#include "vk_texture.h"
+#include "texture.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-VkTexture::~VkTexture()
+Texture::~Texture()
 {
     vkDestroySampler(dev_, sampler_, nullptr);
     vkDestroyImageView(dev_, view_, nullptr);
@@ -17,4 +17,4 @@ VkTexture::~VkTexture()
     devMem_  = VK_NULL_HANDLE;
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

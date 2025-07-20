@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.10)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "")
 	set(CMAKE_BUILD_TYPE "Debug")
@@ -16,5 +16,4 @@ endif()
 
 add_subdirectory(dependencies)
 
-include_directories(${CMAKE_SOURCE_DIR}/scr)
 add_subdirectory(src)

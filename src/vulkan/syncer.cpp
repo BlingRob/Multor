@@ -1,13 +1,13 @@
 /// \file vk_sync.cpp
 
-#include "vk_sync.h"
+#include "syncer.h"
 
 #include <stdexcept>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-VkSyncer::VkSyncer(VkDevice& device)
+Syncer::Syncer(VkDevice& device)
     : m_device(device), imagesInFlight(VK_NULL_HANDLE)
 {
     VkSemaphoreCreateInfo semaphoreInfo {};
@@ -28,7 +28,7 @@ VkSyncer::VkSyncer(VkDevice& device)
         throw std::runtime_error("failed to create semaphores!");
 }
 
-VkSyncer::~VkSyncer()
+Syncer::~Syncer()
 {
     vkDestroySemaphore(m_device, imageAvailableSemaphores, nullptr);
     imageAvailableSemaphores = VK_NULL_HANDLE;
@@ -38,4 +38,4 @@ VkSyncer::~VkSyncer()
     inFlightFences = VK_NULL_HANDLE;
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

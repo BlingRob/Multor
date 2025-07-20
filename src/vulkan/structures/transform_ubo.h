@@ -1,10 +1,8 @@
 /// \file transform_ubo.h
 
 #pragma once
-#ifndef TRANSFORM_UBO_H
-#define TRANSFORM_UBO_H
 
-#include "../objects/vk_buffer.h"
+#include "../objects/buffer.h"
 #include "../../scene_objects/material.h"
 
 #include <vector>
@@ -13,7 +11,7 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
 namespace UBOs
@@ -41,9 +39,9 @@ struct TransformUBO
     void updateView(std::size_t frame, const glm::vec3& newPosition);
     void updatePV(std::size_t frame, const glm::mat4& newProjectViewMatrix);
 
-    std::vector<std::unique_ptr<VulkanBuffer> > matrixes_;
-    std::vector<std::unique_ptr<VulkanBuffer> > viewPosUBO_;
-    std::vector<std::unique_ptr<VulkanBuffer> > materialUBO_;
+    std::vector<std::unique_ptr<Buffer> > matrixes_;
+    std::vector<std::unique_ptr<Buffer> > viewPosUBO_;
+    std::vector<std::unique_ptr<Buffer> > materialUBO_;
 
     static const VkDeviceSize MatBufObj   = sizeof(Material);
     static const VkDeviceSize TransBufObj = sizeof(UBOs::Transform);
@@ -53,6 +51,4 @@ private:
     VkDevice dev_;
 };
 
-} // namespace Multor
-
-#endif // TRANSFORM_UBO_H
+} // namespace Multor::Vulkan

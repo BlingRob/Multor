@@ -8,8 +8,8 @@ namespace Multor
 {
 /*
 //#include "Shader.h"
-#include "Transformation.h"
-#include "Entity.h"
+#include "transformation.h"
+#include "entity.h"
 #include <tuple>
 #include <list>
 

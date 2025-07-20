@@ -1,8 +1,6 @@
-/// \file VkShader.h
+/// \file shader.h
 
 #pragma once
-#ifndef VKSHADER_H
-#define VKSHADER_H
 
 #include <vector>
 #include <memory>
@@ -15,7 +13,7 @@
 
 #include <vulkan/vulkan.h>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
 const int32_t NSupportedShaderTypes = 3;
@@ -65,9 +63,8 @@ private:
 class ShaderLayout
 {
 public:
-    ShaderLayout()
-    {
-    }
+    ShaderLayout();
+
     void addShaderModule(VkShaderModule modul, shader_type type,
                          std::unique_ptr<glslang::TProgram> programm);
 
@@ -85,10 +82,10 @@ private:
     std::vector<VkDescriptorSetLayoutBinding>    Layouts;
 };
 
-class vkShader
+class Shader
 {
 public:
-    vkShader(std::shared_ptr<ShaderLayout> layout) : m_layout(layout)
+    Shader(std::shared_ptr<ShaderLayout> layout) : m_layout(layout)
     {
     }
     std::vector<VkDescriptorSet> DesSet;
@@ -98,6 +95,4 @@ private:
     std::set<std::pair<uint32_t, VkDescriptorSet> > m_bind_VMemP;
 };
 
-} // namespace Multor
-
-#endif // VKSHADER_H
+} // namespace Multor::Vulkan

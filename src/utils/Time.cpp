@@ -1,4 +1,4 @@
-/// \file Time.cpp
+/// \file time.cpp
 #include "Time.h"
 
 namespace Multor

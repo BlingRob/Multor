@@ -1,4 +1,4 @@
-/// \file Entity.h
+/// \file entity.h
 /// \brief Class interface of named entity
 
 #pragma once

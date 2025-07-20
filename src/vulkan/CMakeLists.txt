@@ -9,7 +9,7 @@ file(GLOB_RECURSE SOURCES
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${VULKAN_SDK_INCLUDE_DIR})
-target_link_libraries(${PROJECT_NAME} ${VULKAN_LIBS})
+target_link_libraries(${PROJECT_NAME} ${VULKAN_LIBS} quill::quill tomlplusplus::tomlplusplus)
 
 if(UNIX)
 	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

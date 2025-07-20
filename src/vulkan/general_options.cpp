@@ -1,15 +1,16 @@
-/// \file VkGeneralOptions.cpp
-#include "VkGeneralOptions.h"
+/// \file general_options.cpp
+#include "general_options.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-VkBaseStructs::VkBaseStructs(std::shared_ptr<Window>          pWnd,
-                             std::shared_ptr<Logging::Logger> pLog)
-    : _pWnd(std::move(pWnd)),
-      _pLogger(std::move(pLog)),
-      physicDev(VK_NULL_HANDLE)
+BaseStructs::BaseStructs(std::shared_ptr<Window>          pWnd)
+    : _pWnd(std::move(pWnd))
+    , logger_(Logging::LoggerFactory::GetLogger("vulkan.log"))
+    , physicDev(VK_NULL_HANDLE)
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     CreateInstance();
     CreateSurface();
     InitPhysicalDevice();
@@ -17,8 +18,10 @@ VkBaseStructs::VkBaseStructs(std::shared_ptr<Window>          pWnd,
     CreateCommandPool();
 }
 
-VkBaseStructs::~VkBaseStructs()
+BaseStructs::~BaseStructs()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     vkDestroyCommandPool(device, commandPool, nullptr),
         commandPool = VK_NULL_HANDLE;
 
@@ -31,8 +34,10 @@ VkBaseStructs::~VkBaseStructs()
     instance = VK_NULL_HANDLE;
 }
 
-void VkBaseStructs::CreateInstance()
+void BaseStructs::CreateInstance()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     //If switch on debugging mode, check out main layer for it
     if (enableValidationLayers && !checkValidationLayerSupport())
         throw std::runtime_error(
@@ -42,7 +47,7 @@ void VkBaseStructs::CreateInstance()
     VkApplicationInfo appInfo {};
     appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pNext              = nullptr;
-    appInfo.pApplicationName   = "VulkanRenderer";
+    appInfo.pApplicationName   = "Renderer";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName        = "No Engine";
     appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
@@ -76,7 +81,7 @@ void VkBaseStructs::CreateInstance()
                 VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                 VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT; //VK_DEBUG_UTILS_MESSAGE_TYPE_FLAG_BITS_MAX_ENUM_EXT
             debugCreateInfo.pfnUserCallback = debugCallback;
-            debugCreateInfo.pUserData       = _pLogger.get();
+            debugCreateInfo.pUserData       = nullptr;
             createInfo.pNext =
                 (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
         }
@@ -95,8 +100,10 @@ void VkBaseStructs::CreateInstance()
             throw std::runtime_error("failed to set up debug messenger!");
 }
 
-std::vector<const char*> VkBaseStructs::getRequiredExtensions()
+std::vector<const char*> BaseStructs::getRequiredExtensions()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     uint32_t     extensionCount;
     const char** extensionNames = nullptr;
     SDL_Vulkan_GetInstanceExtensions(&extensionCount, nullptr);
@@ -112,8 +119,10 @@ std::vector<const char*> VkBaseStructs::getRequiredExtensions()
     return extensions;
 }
 
-void VkBaseStructs::InitPhysicalDevice()
+void BaseStructs::InitPhysicalDevice()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     //find Phisical device
     uint32_t DeviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &DeviceCount, nullptr);
@@ -136,8 +145,10 @@ void VkBaseStructs::InitPhysicalDevice()
         throw std::runtime_error("Not found a suitable GPU!");
 }
 
-bool VkBaseStructs::isDeviceSuitable(VkPhysicalDevice device)
+bool BaseStructs::isDeviceSuitable(VkPhysicalDevice device)
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     VkPhysicalDeviceFeatures supportedFeatures;
     vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
     //Check can device execute required operations?
@@ -157,8 +168,10 @@ bool VkBaseStructs::isDeviceSuitable(VkPhysicalDevice device)
     return swapChainAdequate;
 }
 
-void VkBaseStructs::InitLogicalDevice()
+void BaseStructs::InitLogicalDevice()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 
     float                      priority = 1.0f;
@@ -205,15 +218,19 @@ void VkBaseStructs::InitLogicalDevice()
                      &presentQueue);
 }
 
-void VkBaseStructs::CreateSurface()
+void BaseStructs::CreateSurface()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     if (SDL_Vulkan_CreateSurface(_pWnd->GetWindow().get(), instance,
                                  &surface) != SDL_TRUE)
         std::runtime_error("Don't create surface!");
 }
 
-void VkBaseStructs::CreateCommandPool()
+void BaseStructs::CreateCommandPool()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     VkCommandPoolCreateInfo poolInfo {};
     poolInfo.pNext            = nullptr;
     poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -225,8 +242,10 @@ void VkBaseStructs::CreateCommandPool()
         throw std::runtime_error("failed to create command pool!");
 }
 
-QueueFamilyIndices VkBaseStructs::findQueueFamilies(VkPhysicalDevice device)
+QueueFamilyIndices BaseStructs::findQueueFamilies(VkPhysicalDevice device)
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     //Find queue families and check can found queue execute graphical operations?
     QueueFamilyIndices indices;
 
@@ -260,8 +279,10 @@ QueueFamilyIndices VkBaseStructs::findQueueFamilies(VkPhysicalDevice device)
     return indices;
 }
 
-bool VkBaseStructs::checkValidationLayerSupport()
+bool BaseStructs::checkValidationLayerSupport()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -286,8 +307,10 @@ bool VkBaseStructs::checkValidationLayerSupport()
     return true;
 }
 
-bool VkBaseStructs::checkDeviceExtensionSupport(VkPhysicalDevice device)
+bool BaseStructs::checkDeviceExtensionSupport(VkPhysicalDevice device)
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     uint32_t extensionCount = 0;
 
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
@@ -306,14 +329,18 @@ bool VkBaseStructs::checkDeviceExtensionSupport(VkPhysicalDevice device)
     return true;
 }
 
-SwapChainSupportDetails VkBaseStructs::querySwapChainSupport()
+SwapChainSupportDetails BaseStructs::querySwapChainSupport()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     return querySwapChainSupport(physicDev);
 }
 
 SwapChainSupportDetails
-VkBaseStructs::querySwapChainSupport(VkPhysicalDevice device)
+BaseStructs::querySwapChainSupport(VkPhysicalDevice device)
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     SwapChainSupportDetails details;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
                                               &details.capabilities);
@@ -369,25 +396,23 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageTypeFlagsEXT             messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
-    Logging::Logger* pLog = static_cast<Logging::Logger*>(pUserData);
+    static Logging::Logger& logger{Logging::LoggerFactory::GetLogger("vulkan.log")};
+
     switch (messageSeverity)
         {
             case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-                pLog->Log<Logging::File, Logging::Error>(
-                    pCallbackData->pMessage);
+                LOG_ERROR(logger.get(), "Vulkan error: {}", pCallbackData->pMessage);
                 break;
             case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-                pLog->Log<Logging::File, Logging::Debug>(
-                    pCallbackData->pMessage);
+                LOG_WARNING(logger.get(), "Vulkan warning: {}", pCallbackData->pMessage);
                 break;
             case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
             default:
-                pLog->Log<Logging::File, Logging::Info>(
-                    pCallbackData->pMessage);
-                break;
+                LOG_INFO(logger.get(), "Vulkan info: {}", pCallbackData->pMessage);
+            break;
         }
-    //std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
     return VK_FALSE;
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

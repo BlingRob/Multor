@@ -1,22 +1,22 @@
-/// \file vk_mesh_factory.cpp
+/// \file mesh_factory.cpp
 
-#include "vk_mesh_factory.h"
+#include "mesh_factory.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-std::unique_ptr<VkMesh>
-VkMeshFactory::createMesh(std::unique_ptr<BaseMesh> mesh)
+std::unique_ptr<Mesh>
+MeshFactory::createMesh(std::unique_ptr<BaseMesh> mesh)
 {
-    std::unique_ptr<VkMesh> Vkmesh = std::make_unique<VkMesh>();
+    std::unique_ptr<Mesh> vk_mesh = std::make_unique<Mesh>();
 
     constexpr VkDeviceSize MatBufObj   = sizeof(Material);
     constexpr VkDeviceSize TransBufObj = sizeof(UBOs::Transform);
     constexpr VkDeviceSize ViewBufObj  = sizeof(UBOs::ViewPosition);
 
-    Vkmesh->vertBuffer_  = createVertexBuffer(mesh->GetVertexes());
-    Vkmesh->indexBuffer_ = createIndexBuffer(mesh->GetVertexes());
-    Vkmesh->indexesSize_ = mesh->GetVertexes()->GetIndices().size();
+    vk_mesh->vertBuffer_  = createVertexBuffer(mesh->GetVertexes());
+    vk_mesh->indexBuffer_ = createIndexBuffer(mesh->GetVertexes());
+    vk_mesh->indexesSize_ = mesh->GetVertexes()->GetIndices().size();
 
     //Vkmesh->MaterialBuffer = createMaterialBuffer(mesh->GetMaterial());
     //uint16_t i = 0;
@@ -34,11 +34,11 @@ VkMeshFactory::createMesh(std::unique_ptr<BaseMesh> mesh)
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);*/
 
-    return Vkmesh;
+    return vk_mesh;
 }
 
 std::unique_ptr<TransformUBO>
-VkMeshFactory::createUBOBuffers(std::size_t nFrames)
+MeshFactory::createUBOBuffers(std::size_t nFrames)
 {
     std::unique_ptr<TransformUBO> ubo = std::make_unique<TransformUBO>(dev_);
     for (std::size_t i = 0; i < nFrames; ++i)
@@ -62,4 +62,4 @@ VkMeshFactory::createUBOBuffers(std::size_t nFrames)
     return ubo;
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

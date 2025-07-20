@@ -4,7 +4,7 @@
 #ifndef WINDOWS_H
 #define WINDOWS_H
 
-#include "../Transformation.h"
+#include "../transformation.h"
 
 #include <memory>
 #include <stdexcept>

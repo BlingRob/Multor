@@ -4,7 +4,7 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include "../Entity.h"
+#include "../entity.h"
 #include "../utils/image.h"
 
 #include <vector>

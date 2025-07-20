@@ -1,8 +1,6 @@
-/// \file vk_vertex.h
+/// \file vertex.h
 
 #pragma once
-#ifndef VK_VERTEX_H
-#define VK_VERTEX_H
 
 #include "../../scene_objects/vertex.h"
 
@@ -11,10 +9,10 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-struct VkVertex : Vertex
+struct Vertex : Multor::Vertex
 {
     static VkVertexInputBindingDescription getBindingDescription()
     {
@@ -58,6 +56,4 @@ struct VkVertex : Vertex
     }
 };
 
-} // namespace Multor
-
-#endif // VK_VERTEX_H
+} // namespace Multor::Vulkan

@@ -1,16 +1,49 @@
-/// \file VulkanRenderer.h
+/// \file renderer.h
 
-#include "VulkanRenderer.h"
+#include "renderer.h"
 
 #include <chrono>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-void VulkanRenderer::createGraphicsPipeline()
+Renderer::Renderer(std::shared_ptr<Window> pWnd)
+    : FrameChain(std::move(pWnd))
+    , logger_(Logging::LoggerFactory::GetLogger("vulkan.log"))
 {
-    auto bindingDescription    = VkVertex::getBindingDescription();
-    auto attributeDescriptions = VkVertex::getAttributeDescriptions();
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    
+    ShFactory = std::make_unique<ShaderFactory>(device);
+    shaders_.push_back(
+        ShFactory->createShader(LoadTextFile("../../shaders/Base.vs"),
+                                LoadTextFile("../../shaders/Base.frag")));
+
+    createDescriptorPool();
+    createDescriptorSets();
+    createDescriptorSetLayout();
+
+    //Include meshes
+    //createUniformBuffers();
+    //createTextureImage();
+    //createTextureImageView();
+    //createTextureSampler();
+    //createVertexBuffer();
+    //createIndexBuffer();
+    //Update layout
+
+    createGraphicsPipeline();
+
+    createCommandBuffers();
+    createUniformBuffers();
+    createSyncObjects();
+}
+
+void Renderer::createGraphicsPipeline()
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
+    auto bindingDescription    = Vertex::getBindingDescription();
+    auto attributeDescriptions = Vertex::getAttributeDescriptions();
     VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
     vertexInputInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -150,8 +183,10 @@ void VulkanRenderer::createGraphicsPipeline()
         throw std::runtime_error("failed to create graphics pipeline!");
 }
 
-void VulkanRenderer::createCommandBuffers()
+void Renderer::createCommandBuffers()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     commandBuffers.resize(swapChainFramebuffers.size());
     VkCommandBufferAllocateInfo allocInfo {};
     allocInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -240,8 +275,10 @@ void VulkanRenderer::createCommandBuffers()
         }
 }
 
-void VulkanRenderer::Draw()
+void Renderer::Draw()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     //barrier to wait for showing past frame
     vkWaitForFences(device, 1, &syncers[currentFrame].inFlightFences, VK_FALSE,
                     UINT64_MAX);
@@ -308,15 +345,19 @@ void VulkanRenderer::Draw()
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void VulkanRenderer::createSyncObjects()
+void Renderer::createSyncObjects()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     syncers.reserve(MAX_FRAMES_IN_FLIGHT);
     for (uint16_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         syncers.emplace_back(device);
 }
 
-void VulkanRenderer::createDescriptorPool()
+void Renderer::createDescriptorPool()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     std::array<VkDescriptorPoolSize, 1> poolSizes {};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount =
@@ -338,8 +379,10 @@ void VulkanRenderer::createDescriptorPool()
         throw std::runtime_error("failed to create descriptor pool!");
 }
 
-void VulkanRenderer::createDescriptorSetLayout()
+void Renderer::createDescriptorSetLayout()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     VkDescriptorSetLayoutBinding Layouts[1];
     /*
 	//Transformation
@@ -385,8 +428,10 @@ void VulkanRenderer::createDescriptorSetLayout()
         throw std::runtime_error("failed to create descriptor setlayout!");
 }
 
-void VulkanRenderer::createUniformBuffers()
+void Renderer::createUniformBuffers()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     for (auto& mesh : meshes_)
         {
             mesh->tr_ = MeshFac->createUBOBuffers(swapChainImages.size());
@@ -408,8 +453,10 @@ void VulkanRenderer::createUniformBuffers()
         }
 }
 
-void VulkanRenderer::UpdateMats(uint32_t currentImage)
+void Renderer::UpdateMats(uint32_t currentImage)
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     static auto startTime   = std::chrono::high_resolution_clock::now();
     auto        currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(
@@ -436,14 +483,18 @@ void VulkanRenderer::UpdateMats(uint32_t currentImage)
         }
 }
 
-bool VulkanRenderer::hasStencilComponent(VkFormat format)
+bool Renderer::hasStencilComponent(VkFormat format)
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
            format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void VulkanRenderer::createDescriptorSets()
+void Renderer::createDescriptorSets()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     for (auto& mesh : meshes_)
         {
             std::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(),
@@ -595,11 +646,13 @@ void VulkanRenderer::createDescriptorSets()
         }
 }
 
-void VulkanRenderer::Update()
+void Renderer::Update()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     vkDeviceWaitIdle(device);
 
-    ClearInlcudePart();
+    clearInlcudePart();
 
     createUniformBuffers();
 
@@ -609,17 +662,21 @@ void VulkanRenderer::Update()
     createCommandBuffers();
 }
 
-std::shared_ptr<VkMesh> VulkanRenderer::AddMesh(BaseMesh* mesh)
+std::shared_ptr<Mesh> Renderer::AddMesh(BaseMesh* mesh)
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     meshes_.push_back(MeshFac->createMesh(std::unique_ptr<BaseMesh>(mesh)));
     meshes_.back()->sh_ =
-        std::make_shared<vkShader>(shaders_[0]); //shaders_[0]->getShader();
+        std::make_shared<Shader>(shaders_[0]); //shaders_[0]->getShader();
     Update();
     return meshes_.back();
 }
 
-void VulkanRenderer::ClearInlcudePart()
+void Renderer::clearInlcudePart()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     //materialUBO_.clear();
     //TransformUBO.clear();
     //viewPosUBO_.clear();
@@ -644,15 +701,17 @@ void VulkanRenderer::ClearInlcudePart()
     descriptorPool = VK_NULL_HANDLE;
 }
 
-VulkanRenderer::~VulkanRenderer()
+Renderer::~Renderer()
 {
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
     vkDeviceWaitIdle(device);
 
     syncers.clear();
 
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
     descriptorSetLayout = VK_NULL_HANDLE;
-    ClearInlcudePart();
+    clearInlcudePart();
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     graphicsPipeline = VK_NULL_HANDLE;
     ShFactory.reset();
@@ -660,4 +719,4 @@ VulkanRenderer::~VulkanRenderer()
     pipelineLayout = VK_NULL_HANDLE;
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

@@ -1,15 +1,13 @@
-/// \file vk_command_executer.h
+/// \file command_executer.h
 
 #pragma once
-#ifndef VKCOMMANDEXECUTER_H
-#define VKCOMMANDEXECUTER_H
 
 #include <exception>
 #include <stdexcept>
 
 #include <vulkan/vulkan.h>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
 class CommandExecuter
@@ -36,6 +34,5 @@ private:
     void            endSingleTimeCommands(VkCommandBuffer commandBuffer);
 };
 
-} // namespace Multor
+} // namespace Multor::Vulkan
 
-#endif // VKCOMMANDEXECUTER_H

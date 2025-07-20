@@ -1,11 +1,11 @@
-/// \file Transformation.h
+/// \file transformation.h
 
 #pragma once
 #ifndef TRANSFORMATION_H
 #define TRANSFORMATION_H
 
 // #include "Shader.h"
-#include "Camera.h"
+#include "camera.h"
 
 #include <memory>
 

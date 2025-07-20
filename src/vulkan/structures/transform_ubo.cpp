@@ -2,7 +2,7 @@
 
 #include "transform_ubo.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
 void TransformUBO::updateModel(std::size_t      frame,
@@ -36,4 +36,4 @@ void TransformUBO::updatePV(std::size_t      frame,
     vkUnmapMemory(dev_, matrixes_[frame]->bufferMemory_);
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

@@ -1,23 +1,21 @@
-/// \file VulkanObjects.h
+/// \file vertex_buffer.h
 
 #pragma once
-#ifndef VK_VERTEX_BUFFER_H
-#define VK_VERTEX_BUFFER_H
 
-#include "vk_buffer.h"
+#include "buffer.h"
 
 #include <memory>
 #include <array>
 
 #include <vulkan/vulkan.h>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
 struct VertexBuffer
 {
     VertexBuffer(
-        std::unique_ptr<VulkanBuffer>                           buf,
+        std::unique_ptr<Buffer>                           buf,
         const VkVertexInputBindingDescription&                  binddis,
         const std::array<VkVertexInputAttributeDescription, 5>& attrdes)
         : pVertBuf_(std::move(buf)),
@@ -28,9 +26,7 @@ struct VertexBuffer
 
     VkVertexInputBindingDescription                  bindingDescription {};
     std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions {};
-    std::unique_ptr<VulkanBuffer>                    pVertBuf_;
+    std::unique_ptr<Buffer>                    pVertBuf_;
 };
 
-} // namespace Multor
-
-#endif // VK_VERTEX_BUFFER_H
+} // namespace Multor::Vulkan

@@ -1,12 +1,10 @@
-/// \file vk_texture_factory.h
+/// \file texture_factory.h
 
 #pragma once
-#ifndef VK_TEXTURE_FACTORY_H
-#define VK_TEXTURE_FACTORY_H
 
 #include "../utils/image.h"
-#include "vk_buffer_factory.h"
-#include "objects/vk_texture.h"
+#include "buffer_factory.h"
+#include "objects/texture.h"
 
 #include <tuple>
 #include <exception>
@@ -15,19 +13,19 @@
 
 #include <vulkan/vulkan.h>
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-class VkTextureFactory : public VkBufferFactory
+class TextureFactory : public BufferFactory
 {
 public:
-    VkTextureFactory(VkDevice dev, VkPhysicalDevice PhysDev,
+    TextureFactory(VkDevice dev, VkPhysicalDevice PhysDev,
                      std::shared_ptr<CommandExecuter> ex)
-        : VkBufferFactory(dev, PhysDev, ex)
+        : BufferFactory(dev, PhysDev, ex)
     {
     }
-    VkTexture*                 createTexture(Image* img);
-    std::unique_ptr<VkTexture> createDepthTexture(std::size_t width,
+    Texture*                 createTexture(Image* img);
+    std::unique_ptr<Texture> createDepthTexture(std::size_t width,
                                                   std::size_t height);
 
     VkImageView createImageView(VkImage image, VkFormat format,
@@ -46,6 +44,4 @@ private:
                                  VkFormatFeatureFlags         features);
 };
 
-} // namespace Multor
-
-#endif // VK_TEXTURE_FACTORY_H
+} // namespace Multor::Vulkan

@@ -1,12 +1,12 @@
 /// \file vk_texture_factory.cpp
 
-#include "vk_texture_factory.h"
-#include "objects/vk_buffer.h"
+#include "texture_factory.h"
+#include "objects/buffer.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-VkImageView VkTextureFactory::createImageView(VkImage image, VkFormat format,
+VkImageView TextureFactory::createImageView(VkImage image, VkFormat format,
                                               VkImageAspectFlags aspectFlags)
 {
     VkImageViewCreateInfo viewInfo {};
@@ -28,7 +28,7 @@ VkImageView VkTextureFactory::createImageView(VkImage image, VkFormat format,
     return imageView;
 }
 
-VkSampler VkTextureFactory::createTextureSampler()
+VkSampler TextureFactory::createTextureSampler()
 {
     VkSampler textureSampler;
 
@@ -60,7 +60,7 @@ VkSampler VkTextureFactory::createTextureSampler()
     return textureSampler;
 }
 
-VkTexture* VkTextureFactory::createTexture(Image* img)
+Texture* TextureFactory::createTexture(Image* img)
 {
     //std::shared_ptr<Image> img = ImageLoader::LoadTexture("A:/VulkanEngine/build/matrix.jpg");
 
@@ -69,7 +69,7 @@ VkTexture* VkTextureFactory::createTexture(Image* img)
 
     VkDeviceSize imageSize = img->w_ * img->h_ * 4;
 
-    std::unique_ptr<VulkanBuffer> stBuf =
+    std::unique_ptr<Buffer> stBuf =
         createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -93,7 +93,7 @@ VkTexture* VkTextureFactory::createTexture(Image* img)
     _executer->transitionImageLayout(texture.first, VK_FORMAT_R8G8B8A8_SRGB,
                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    VkTexture* val = new VkTexture;
+    Texture* val = new Texture;
     val->dev_      = dev_;
     val->img_      = texture.first;
     val->view_     = createTextureImageView(texture.first);
@@ -102,10 +102,10 @@ VkTexture* VkTextureFactory::createTexture(Image* img)
     return val;
 }
 
-std::unique_ptr<VkTexture>
-VkTextureFactory::createDepthTexture(std::size_t width, std::size_t height)
+std::unique_ptr<Texture>
+TextureFactory::createDepthTexture(std::size_t width, std::size_t height)
 {
-    std::unique_ptr<VkTexture> depthTex = std::make_unique<VkTexture>();
+    std::unique_ptr<Texture> depthTex = std::make_unique<Texture>();
     depthTex->dev_                      = dev_;
 
     VkFormat depthFormat = findDepthFormat();
@@ -127,7 +127,7 @@ VkTextureFactory::createDepthTexture(std::size_t width, std::size_t height)
 }
 
 std::pair<VkImage, VkDeviceMemory>
-VkTextureFactory::createImage(uint32_t width, uint32_t height, VkFormat format,
+TextureFactory::createImage(uint32_t width, uint32_t height, VkFormat format,
                               VkImageTiling tiling, VkImageUsageFlags usage,
                               VkMemoryPropertyFlags properties)
 {
@@ -168,14 +168,14 @@ VkTextureFactory::createImage(uint32_t width, uint32_t height, VkFormat format,
     return image;
 }
 
-VkImageView VkTextureFactory::createTextureImageView(VkImage img)
+VkImageView TextureFactory::createTextureImageView(VkImage img)
 {
     return createImageView(img, VK_FORMAT_R8G8B8A8_SRGB,
                            VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 VkFormat
-VkTextureFactory::findSupportedFormat(const std::vector<VkFormat>& candidates,
+TextureFactory::findSupportedFormat(const std::vector<VkFormat>& candidates,
                                       VkImageTiling                tiling,
                                       VkFormatFeatureFlags         features)
 {
@@ -194,7 +194,7 @@ VkTextureFactory::findSupportedFormat(const std::vector<VkFormat>& candidates,
     throw std::runtime_error("failed to find supported format!");
 }
 
-VkFormat VkTextureFactory::findDepthFormat()
+VkFormat TextureFactory::findDepthFormat()
 {
     return findSupportedFormat({VK_FORMAT_D32_SFLOAT,
                                 VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -203,4 +203,4 @@ VkFormat VkTextureFactory::findDepthFormat()
                                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

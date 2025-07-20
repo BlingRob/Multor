@@ -1,11 +1,11 @@
 /// \file vk_shader_factory.cpp
 
-#include "vk_shader_factory.h"
+#include "shader_factory.h"
 
-namespace Multor
+namespace Multor::Vulkan
 {
 
-VkShaderFactory::VkShaderFactory(VkDevice& device)
+ShaderFactory::ShaderFactory(VkDevice& device)
 {
     //CreatedModules.reserve(10);
     _device = device;
@@ -13,14 +13,14 @@ VkShaderFactory::VkShaderFactory(VkDevice& device)
     glslang::InitializeProcess();
 }
 
-VkShaderFactory::~VkShaderFactory()
+ShaderFactory::~ShaderFactory()
 {
     glslang::FinalizeProcess();
     for (auto& modul : CreatedModules)
         vkDestroyShaderModule(_device, modul, nullptr);
 }
 
-void VkShaderFactory::InitResource()
+void ShaderFactory::InitResource()
 {
     glslc_resource_limits = {
         /* .MaxLights = */ 32,
@@ -130,7 +130,7 @@ void VkShaderFactory::InitResource()
     };
 }
 
-/*VkShaderModule VkShaderFactory::CreateModule(std::string_view Source, EShLanguage stage)
+/*VkShaderModule ShaderFactory::CreateModule(std::string_view Source, EShLanguage stage)
 {
     if (Source.empty())
         throw(std::string("ERROR::SHADER THERE AREN'T SHADERS\n"));
@@ -164,7 +164,7 @@ void VkShaderFactory::InitResource()
 }*/
 
 std::unique_ptr<glslang::TShader>
-VkShaderFactory::createShader(std::string_view source, EShLanguage type)
+ShaderFactory::createShader(std::string_view source, EShLanguage type)
 {
     EShMessages                       infoMsg = EShMessages::EShMsgDebugInfo;
     std::unique_ptr<glslang::TShader> shader;
@@ -184,7 +184,7 @@ VkShaderFactory::createShader(std::string_view source, EShLanguage type)
 }
 
 std::unique_ptr<glslang::TProgram>
-VkShaderFactory::createProgram(std::unique_ptr<glslang::TShader> shader)
+ShaderFactory::createProgram(std::unique_ptr<glslang::TShader> shader)
 {
     std::unique_ptr<glslang::TProgram> program;
     EShMessages                        infoMsg = EShMessages::EShMsgDebugInfo;
@@ -199,7 +199,7 @@ VkShaderFactory::createProgram(std::unique_ptr<glslang::TShader> shader)
 }
 
 std::vector<unsigned int>
-VkShaderFactory::getSPIRV(const glslang::TIntermediate* intr)
+ShaderFactory::getSPIRV(const glslang::TIntermediate* intr)
 {
     //GLSL -> SPIR-V
     spv::SpvBuildLogger logger;
@@ -213,7 +213,7 @@ VkShaderFactory::getSPIRV(const glslang::TIntermediate* intr)
 }
 
 VkShaderModule
-VkShaderFactory::createModule(const std::vector<unsigned int>& spirv)
+ShaderFactory::createModule(const std::vector<unsigned int>& spirv)
 {
     //Create VkShaderModul
     VkShaderModuleCreateInfo createInfo {};
@@ -231,7 +231,7 @@ VkShaderFactory::createModule(const std::vector<unsigned int>& spirv)
 }
 
 std::shared_ptr<ShaderLayout>
-VkShaderFactory::createShader(std::string_view vertex, std::string_view fragment,
+ShaderFactory::createShader(std::string_view vertex, std::string_view fragment,
                             std::string_view geometry)
 {
     std::shared_ptr<ShaderLayout> _pSh = std::make_shared<ShaderLayout>();
@@ -277,4 +277,4 @@ VkShaderFactory::createShader(std::string_view vertex, std::string_view fragment
     return createdVkShaders.back();
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan

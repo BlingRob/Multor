@@ -1,7 +1,7 @@
 ﻿/// \file main.cpp
 //
 
-#include "RenderEngine.h"
+#include "application.h"
 #include "utils/image_loader.h"
 #include <SDL3/SDL_main.h>
 #include <memory>
@@ -9,46 +9,6 @@
 using namespace Multor;
 
 BaseMesh *TestMesh, *TestMesh2;
-/*
-class Application 
-{
-public:
-
-	Application() 
-	{
-		wnd = std::make_shared<Window>();
-		eng = std::make_shared<VulkanRenderer>(wnd);
-		eng->AddMesh(TestMesh);
-	}
-
-	void exec() 
-	{
-		mainLoop();
-		//cleanup();
-	}
-	~Application() 
-	{
-
-	}
-private:
-	std::shared_ptr<Window> wnd;
-	std::shared_ptr<VulkanRenderer> eng;
-
-	void mainLoop() 
-	{
-		while (wnd->Run())
-		{
-			if (wnd->resized)
-			{
-				eng->Update();
-				wnd->resized = false;
-			}
-			eng->Draw();
-		}
-	}
-
-	void cleanup() {};
-};*/
 
 int main(int argc, char* args[])
 {
@@ -78,7 +38,7 @@ int main(int argc, char* args[])
                     Texture_Types::Diffuse,
                     std::vector<std::shared_ptr<Image> >(
                         {ImageLoader::LoadTexture(
-                            "A:/VulkanEngine/build2/matrix.jpg")}));
+                            "./Res/matrix.jpg")}));
             TestMesh = new BaseMesh(
                 std::make_unique<Vertexes>(8, &cubePos[0],
                                            std::vector<std::uint32_t>(indices)),
@@ -89,8 +49,8 @@ int main(int argc, char* args[])
                 std::make_unique<Vertexes>(8, &cubePos2[0], std::move(indices)),
                 nullptr, std::vector<std::shared_ptr<BaseTexture> >({tex}));
             Application             app;
-            std::shared_ptr<VkMesh> m1 = app.GetRenderer()->AddMesh(TestMesh);
-            std::shared_ptr<VkMesh> m2 = app.GetRenderer()->AddMesh(TestMesh2);
+            std::shared_ptr<Vulkan::Mesh> m1 = app.GetRenderer()->AddMesh(TestMesh);
+            std::shared_ptr<Vulkan::Mesh> m2 = app.GetRenderer()->AddMesh(TestMesh2);
             static auto startTime = std::chrono::high_resolution_clock::now();
             while (app.MainLoop())
                 {

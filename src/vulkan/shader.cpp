@@ -1,12 +1,14 @@
 /// \file VkShader.cpp
-#include "VkShader.h"
+#include "shader.h"
 
 // #include <glslang/MachineIndependent/localintermediate.h>
 #include <D:/programming/c++/Multor/build/dependencies/VulkanSDK/glslang/glslang/MachineIndependent/localintermediate.h>
 
 
-namespace Multor
+namespace Multor::Vulkan
 {
+
+ShaderLayout::ShaderLayout(){}
 
 void ShaderLayout::addShaderModule(VkShaderModule modul, shader_type type,
                                    std::unique_ptr<glslang::TProgram> program)
@@ -84,4 +86,4 @@ ShaderLayout::getLayoutBindings()
     return &Layouts;
 }
 
-} // namespace Multor
+} // namespace Multor::Vulkan
