@@ -5,6 +5,15 @@
 namespace Multor::Vulkan
 {
 
+namespace
+{
+bool hasStencilComponent(VkFormat format)
+{
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+           format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+} // namespace
+
 void CommandExecuter::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
                                  VkDeviceSize size)
 {
@@ -68,6 +77,11 @@ void CommandExecuter::TransitionImageLayout(VkImage image, VkFormat format,
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (hasStencilComponent(format))
+                {
+                    barrier.subresourceRange.aspectMask |=
+                        VK_IMAGE_ASPECT_STENCIL_BIT;
+                }
 
             sourceStage      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;

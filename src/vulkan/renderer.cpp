@@ -169,7 +169,7 @@ void Renderer::createGraphicsPipeline()
         VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable       = VK_TRUE;
     depthStencil.depthWriteEnable      = VK_TRUE;
-    depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+    depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.minDepthBounds        = 0.0f; // Optional
     depthStencil.maxDepthBounds        = 1.0f; // Optional
@@ -215,7 +215,7 @@ void Renderer::createGraphicsPipeline()
     pipelineInfo.pNext = nullptr;
     //pipelineInfo.stageCount = 2;
     //pipelineInfo.pStages = stgs;
-    pipelineInfo.stageCount          = activeShader_->GetStages()->size();
+    pipelineInfo.stageCount          = static_cast<std::uint32_t>(activeShader_->GetStages()->size());
     pipelineInfo.pStages             = activeShader_->GetStages()->data();
     pipelineInfo.pVertexInputState   = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -445,7 +445,7 @@ void Renderer::createDescriptorSetLayout()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
-    VkDescriptorSetLayoutBinding Layouts[1];
+    // VkDescriptorSetLayoutBinding Layouts[1];
     /*
 	//Transformation
 	Layouts[0].binding = 0;
@@ -482,7 +482,7 @@ void Renderer::createDescriptorSetLayout()
     VkDescriptorSetLayoutCreateInfo layoutInfo {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.pNext = nullptr;
-    layoutInfo.bindingCount = activeShader_->GetLayoutBindings()->size();
+    layoutInfo.bindingCount = static_cast<uint32_t>(activeShader_->GetLayoutBindings()->size());
     layoutInfo.pBindings = activeShader_->GetLayoutBindings()->data(); //Layouts;
 
     if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,

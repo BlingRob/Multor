@@ -25,8 +25,8 @@ public:
     {
     }
     Texture*                 CreateTexture(Image* img);
-    std::unique_ptr<Texture> CreateDepthTexture(std::size_t width,
-                                                  std::size_t height);
+    std::unique_ptr<Texture> CreateDepthTexture(std::uint32_t width,
+                                                  std::uint32_t height);
 
     VkImageView CreateImageView(VkImage image, VkFormat format,
                                 VkImageAspectFlags aspectFlags);

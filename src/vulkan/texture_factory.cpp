@@ -103,18 +103,24 @@ Texture* TextureFactory::CreateTexture(Image* img)
 }
 
 std::unique_ptr<Texture>
-TextureFactory::CreateDepthTexture(std::size_t width, std::size_t height)
+TextureFactory::CreateDepthTexture(std::uint32_t width, std::uint32_t height)
 {
     std::unique_ptr<Texture> depthTex = std::make_unique<Texture>();
     depthTex->dev_                      = dev_;
 
     VkFormat depthFormat = FindDepthFormat();
+    VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (depthFormat == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+        depthFormat == VK_FORMAT_D24_UNORM_S8_UINT)
+        {
+            depthAspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
     auto [depth, depthMemory] =
         CreateImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
                     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     depthTex->view_ =
-        CreateImageView(depth, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        CreateImageView(depth, depthFormat, depthAspect);
 
     depthTex->img_    = depth;
     depthTex->devMem_ = depthMemory;
