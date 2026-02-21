@@ -8,7 +8,7 @@ namespace Multor::Vulkan
 {
 
 Syncer::Syncer(VkDevice& device)
-    : m_device(device), imagesInFlight(VK_NULL_HANDLE)
+    : m_device(device), imagesInFlight_(VK_NULL_HANDLE)
 {
     VkSemaphoreCreateInfo semaphoreInfo {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -20,22 +20,22 @@ Syncer::Syncer(VkDevice& device)
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     if (vkCreateSemaphore(device, &semaphoreInfo, nullptr,
-                          &imageAvailableSemaphores) != VK_SUCCESS ||
+                          &imageAvailableSemaphores_) != VK_SUCCESS ||
         vkCreateSemaphore(device, &semaphoreInfo, nullptr,
-                          &renderFinishedSemaphores) != VK_SUCCESS ||
-        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences) !=
+                          &renderFinishedSemaphores_) != VK_SUCCESS ||
+        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences_) !=
             VK_SUCCESS)
         throw std::runtime_error("failed to create semaphores!");
 }
 
 Syncer::~Syncer()
 {
-    vkDestroySemaphore(m_device, imageAvailableSemaphores, nullptr);
-    imageAvailableSemaphores = VK_NULL_HANDLE;
-    vkDestroySemaphore(m_device, renderFinishedSemaphores, nullptr);
-    renderFinishedSemaphores = VK_NULL_HANDLE;
-    vkDestroyFence(m_device, inFlightFences, nullptr);
-    inFlightFences = VK_NULL_HANDLE;
+    vkDestroySemaphore(m_device, imageAvailableSemaphores_, nullptr);
+    imageAvailableSemaphores_ = VK_NULL_HANDLE;
+    vkDestroySemaphore(m_device, renderFinishedSemaphores_, nullptr);
+    renderFinishedSemaphores_ = VK_NULL_HANDLE;
+    vkDestroyFence(m_device, inFlightFences_, nullptr);
+    inFlightFences_ = VK_NULL_HANDLE;
 }
 
 } // namespace Multor::Vulkan

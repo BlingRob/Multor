@@ -10,7 +10,7 @@ namespace Multor::Vulkan
 
 ShaderLayout::ShaderLayout(){}
 
-void ShaderLayout::addShaderModule(VkShaderModule modul, shader_type type,
+void ShaderLayout::AddShaderModule(VkShaderModule modul, shader_type type,
                                    std::unique_ptr<glslang::TProgram> program)
 {
     glslang::TIntermediate* inter =
@@ -31,7 +31,7 @@ void ShaderLayout::addShaderModule(VkShaderModule modul, shader_type type,
 
     for (size_t i = 0; i < program->getNumUniformBlocks(); ++i)
         {
-            Layouts.push_back(VkDescriptorSetLayoutBinding {
+            layouts_.push_back(VkDescriptorSetLayoutBinding {
                 static_cast<uint32_t>(program->getUniformBlock(i).getBinding()),
                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
                 static_cast<unsigned int>(
@@ -43,7 +43,7 @@ void ShaderLayout::addShaderModule(VkShaderModule modul, shader_type type,
         {
             if (program->getUniform(i).getType()->isTexture())
                 {
-                    Layouts.push_back(VkDescriptorSetLayoutBinding {
+                    layouts_.push_back(VkDescriptorSetLayoutBinding {
                         static_cast<uint32_t>(
                             program->getUniform(i).getBinding()),
                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
@@ -54,7 +54,7 @@ void ShaderLayout::addShaderModule(VkShaderModule modul, shader_type type,
                 }
         }
 
-    prg = program.release();
+    prg_ = program.release();
 }
 
 void ShaderLayout::addPipShStInfo(VkShaderModule        modul,
@@ -72,18 +72,18 @@ void ShaderLayout::addPipShStInfo(VkShaderModule        modul,
     ShaderStageInfo.pName               = entryPointName;
     ShaderStageInfo.pSpecializationInfo = nullptr;
 
-    units.push_back(ShaderStageInfo);
+    units_.push_back(ShaderStageInfo);
 }
 
-const std::vector<VkPipelineShaderStageCreateInfo>* ShaderLayout::getStages()
+const std::vector<VkPipelineShaderStageCreateInfo>* ShaderLayout::GetStages()
 {
-    return &units;
+    return &units_;
 }
 
 const std::vector<VkDescriptorSetLayoutBinding>*
-ShaderLayout::getLayoutBindings()
+ShaderLayout::GetLayoutBindings()
 {
-    return &Layouts;
+    return &layouts_;
 }
 
 } // namespace Multor::Vulkan

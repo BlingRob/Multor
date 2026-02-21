@@ -31,10 +31,10 @@ Application::Application()
     try
         {
             pContr_    = std::make_shared<Position_Controller>();
-            pWindow_   = std::make_shared<Window>(&signals, pContr_);
-            _pRenderer = std::make_shared<Vulkan::Renderer>(pWindow_);
+            pWindow_   = std::make_shared<Window>(&signals_, pContr_);
+            pRenderer_ = std::make_shared<Vulkan::Renderer>(pWindow_);
 
-            signals[0] = std::bind(&Vulkan::Renderer::Update, _pRenderer);
+            signals_[0] = std::bind(&Vulkan::Renderer::Update, pRenderer_);
 
             LOG_INFO(logger.get(), "Application was initializated");
         }
@@ -54,7 +54,7 @@ Application::~Application(){}
 
 std::shared_ptr<Vulkan::Renderer> Application::GetRenderer()
 {
-    return _pRenderer;
+    return pRenderer_;
 }
 
 bool Application::MainLoop()
@@ -66,11 +66,11 @@ bool Application::MainLoop()
             const int maxFps = table_["rendering"]["max_fps"].value_or(30);
             const auto frameStart = clock::now();
 
-            pContr_->dt = static_cast<float>(chron());
+            pContr_->dt_ = static_cast<float>(chron_());
             if (!pWindow_->ProcEvents())
                 return false;
             pWindow_->SwapBuffer();
-            _pRenderer->Draw();
+            pRenderer_->Draw();
 
             if (maxFps > 0)
                 {
@@ -98,7 +98,7 @@ bool Application::MainLoop()
 
 double Application::GetTime()
 {
-    return chron.GetTime();
+    return chron_.GetTime();
 }
 
 } // namespace Multor

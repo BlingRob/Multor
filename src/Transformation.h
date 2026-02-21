@@ -20,10 +20,10 @@ struct Matrices
 {
     Matrices()
     {
-        Projection = std::make_shared<glm::mat4>(1.0f);
-        View       = std::make_shared<glm::mat4>(1.0f);
+        projection_ = std::make_shared<glm::mat4>(1.0f);
+        view_       = std::make_shared<glm::mat4>(1.0f);
     }
-    std::shared_ptr<glm::mat4> Projection, View;
+    std::shared_ptr<glm::mat4> projection_, view_;
     //void SendToShader(const Shader& shader);
 };
 
@@ -31,28 +31,28 @@ struct Position_Controller : public Matrices
 {
     Position_Controller()
     {
-        dt  = 0.0f;
-        cam = std::make_shared<Camera>(glm::vec3(10.0f, 10.0f, 10.0f));
+        dt_  = 0.0f;
+        cam_ = std::make_shared<Camera>(glm::vec3(10.0f, 10.0f, 10.0f));
     }
 
     //void SendToShader(const Shader& shader);
 
-    std::shared_ptr<Camera> cam;
+    std::shared_ptr<Camera> cam_;
     //delta time
-    float dt;
+    float dt_;
 };
 
 class Transformation
 {
 public:
     Transformation(glm::mat4 mod = glm::mat4(1.0f))
-        : Model(mod),
-          NormalMatrix(glm::mat3(glm::transpose(glm::inverse(Model))))
+        : model_(mod),
+          normalMatrix_(glm::mat3(glm::transpose(glm::inverse(model_))))
     {
     }
     Transformation(std::shared_ptr<glm::mat4> mod)
-        : Model(*mod),
-          NormalMatrix(glm::mat3(glm::transpose(glm::inverse(Model))))
+        : model_(*mod),
+          normalMatrix_(glm::mat3(glm::transpose(glm::inverse(model_))))
     {
     }
     //void SendToShader(const Shader& shader);
@@ -66,8 +66,8 @@ public:
     void Scale(const glm::vec3& coefs);
 
 private:
-    glm::mat4 Model;
-    glm::mat3 NormalMatrix;
+    glm::mat4 model_;
+    glm::mat3 normalMatrix_;
     void      updateNormal();
 };
 

@@ -20,22 +20,22 @@ class BufferFactory
 public:
     BufferFactory(VkDevice dev, VkPhysicalDevice PhysDev,
                     std::shared_ptr<CommandExecuter> ex)
-        : dev_(dev), physDev(PhysDev), _executer(ex)
+        : dev_(dev), physDev_(PhysDev), executer_(ex)
     {
     }
 
     std::unique_ptr<Buffer>
-    createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
+    CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                  VkMemoryPropertyFlags properties);
-    std::unique_ptr<VertexBuffer> createVertexBuffer(Vertexes* vert);
-    std::unique_ptr<Buffer> createIndexBuffer(Vertexes* vert);
-    std::unique_ptr<Buffer> createUniformBuffer(VkDeviceSize bufferSize);
-    std::unique_ptr<Buffer> createMaterialBuffer(Material* mat);
+    std::unique_ptr<VertexBuffer> CreateVertexBuffer(Vertexes* vert);
+    std::unique_ptr<Buffer> CreateIndexBuffer(Vertexes* vert);
+    std::unique_ptr<Buffer> CreateUniformBuffer(VkDeviceSize bufferSize);
+    std::unique_ptr<Buffer> CreateMaterialBuffer(Material* mat);
 
 protected:
     VkDevice                         dev_;
-    VkPhysicalDevice                 physDev;
-    std::shared_ptr<CommandExecuter> _executer;
+    VkPhysicalDevice                 physDev_;
+    std::shared_ptr<CommandExecuter> executer_;
     uint32_t                         findMemoryType(uint32_t              typeFilter,
                                                     VkMemoryPropertyFlags properties);
 };

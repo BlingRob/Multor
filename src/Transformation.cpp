@@ -15,18 +15,18 @@ namespace Multor
 
 void Transformation::SetTransform(const std::shared_ptr<glm::mat4> matr)
 {
-    Model = *matr;
+    model_ = *matr;
     updateNormal();
 }
 
 void Transformation::SetTransform(const glm::mat4& matr)
 {
-    Model = matr;
+    model_ = matr;
     updateNormal();
 }
 glm::mat4 Transformation::GetTransform() const
 {
-    return Model;
+    return model_;
 }
 
 /*void Transformation::SendToShader(const Shader& shader)
@@ -38,23 +38,23 @@ glm::mat4 Transformation::GetTransform() const
 
 void Transformation::Translate(const glm::vec3& trans)
 {
-    Model = glm::translate(Model, trans);
+    model_ = glm::translate(model_, trans);
     updateNormal();
 }
 
 void Transformation::Rotate(float alph, const glm::vec3& axes)
 {
-    Model = glm::rotate(Model, alph, axes);
+    model_ = glm::rotate(model_, alph, axes);
     updateNormal();
 }
 void Transformation::Scale(const glm::vec3& coefs)
 {
-    Model = glm::scale(Model, coefs);
+    model_ = glm::scale(model_, coefs);
     updateNormal();
 }
 void Transformation::updateNormal()
 {
-    NormalMatrix = glm::mat3(glm::transpose(glm::inverse(Model)));
+    normalMatrix_ = glm::mat3(glm::transpose(glm::inverse(model_)));
 }
 
 /*void Position_Controller::SendToShader(const Shader& shader)

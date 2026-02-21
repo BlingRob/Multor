@@ -1,5 +1,5 @@
-/// \file Node.cpp
-#include "Node.h"
+/// \file node.cpp
+#include "node.h"
 
 namespace Multor
 {

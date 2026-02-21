@@ -65,21 +65,21 @@ class ShaderLayout
 public:
     ShaderLayout();
 
-    void addShaderModule(VkShaderModule modul, shader_type type,
+    void AddShaderModule(VkShaderModule modul, shader_type type,
                          std::unique_ptr<glslang::TProgram> programm);
 
-    const std::vector<VkPipelineShaderStageCreateInfo>* getStages();
-    const std::vector<VkDescriptorSetLayoutBinding>*    getLayoutBindings();
+    const std::vector<VkPipelineShaderStageCreateInfo>* GetStages();
+    const std::vector<VkDescriptorSetLayoutBinding>*    GetLayoutBindings();
 
 private:
-    glslang::TProgram* prg;
+    glslang::TProgram* prg_ = nullptr;
 
     void addPipShStInfo(VkShaderModule modul, VkShaderStageFlagBits stage,
                         const char* entryPointName);
     //getShaderVariables();
 
-    std::vector<VkPipelineShaderStageCreateInfo> units;
-    std::vector<VkDescriptorSetLayoutBinding>    Layouts;
+    std::vector<VkPipelineShaderStageCreateInfo> units_;
+    std::vector<VkDescriptorSetLayoutBinding>    layouts_;
 };
 
 class Shader
@@ -88,7 +88,7 @@ public:
     Shader(std::shared_ptr<ShaderLayout> layout) : m_layout(layout)
     {
     }
-    std::vector<VkDescriptorSet> DesSet;
+    std::vector<VkDescriptorSet> desSet_;
 
 private:
     const std::shared_ptr<ShaderLayout>             m_layout;

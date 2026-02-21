@@ -1,4 +1,4 @@
-/// \file Mesh.h
+/// \file mesh.h
 
 #pragma once
 #ifndef MESH_H

@@ -40,9 +40,9 @@ public:
     void Draw();
     void Update();
 
-    size_t getCurFrame()
+    size_t GetCurFrame()
     {
-        return imageIndex;
+        return imageIndex_;
     };
 
 private:
@@ -56,28 +56,28 @@ private:
 
     bool hasStencilComponent(VkFormat format);
 
-    void clearInlcudePart();
+    void clearIncludePart();
 
-    void UpdateMats(uint32_t currentImage);
+    void updateMats(uint32_t currentImage);
 
 private:
-    const int MAX_FRAMES_IN_FLIGHT = 3;
-    size_t    currentFrame         = 0;
-    uint32_t  imageIndex;
+    const int maxFramesInFlight_ = 3;
+    size_t    currentFrame_      = 0;
+    uint32_t  imageIndex_        = 0;
 
     Logging::Logger& logger_;
 
-    std::unique_ptr<ShaderFactory>              ShFactory;
+    std::unique_ptr<ShaderFactory>              shFactory_;
     std::vector<std::shared_ptr<ShaderLayout> > shaders_;
     std::shared_ptr<ShaderLayout>               activeShader_;
 
-    VkPipelineLayout      pipelineLayout;
-    VkPipeline            graphicsPipeline;
-    VkDescriptorSetLayout descriptorSetLayout;
-    VkDescriptorPool      descriptorPool;
+    VkPipelineLayout      pipelineLayout_      = VK_NULL_HANDLE;
+    VkPipeline            graphicsPipeline_    = VK_NULL_HANDLE;
+    VkDescriptorSetLayout descriptorSetLayout_ = VK_NULL_HANDLE;
+    VkDescriptorPool      descriptorPool_      = VK_NULL_HANDLE;
 
-    std::vector<VkCommandBuffer> commandBuffers;
-    std::vector<Syncer>          syncers;
+    std::vector<VkCommandBuffer> commandBuffers_;
+    std::vector<Syncer>          syncers_;
 
     std::list<std::shared_ptr<Mesh> > meshes_;
 };

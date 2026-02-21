@@ -15,14 +15,14 @@ class ShaderFactory
 {
 public:
     ShaderFactory(VkDevice& device);
-    std::shared_ptr<ShaderLayout> createShader(std::string_view vertex,
+    std::shared_ptr<ShaderLayout> CreateShader(std::string_view vertex,
                                                std::string_view fragment,
                                                std::string_view geometry = "");
     ~ShaderFactory();
 
 private:
-    VkDevice         _device;
-    TBuiltInResource glslc_resource_limits;
+    VkDevice         device_;
+    TBuiltInResource glslcResourceLimits_;
 
     std::unique_ptr<glslang::TShader> createShader(std::string_view,
                                                    EShLanguage type);
@@ -31,8 +31,8 @@ private:
     std::vector<unsigned int> getSPIRV(const glslang::TIntermediate* intr);
     VkShaderModule createModule(const std::vector<unsigned int>& spirv);
 
-    std::vector<VkShaderModule>                 CreatedModules;
-    std::vector<std::shared_ptr<ShaderLayout> > createdVkShaders;
+    std::vector<VkShaderModule>                 createdModules_;
+    std::vector<std::shared_ptr<ShaderLayout> > createdVkShaders_;
 
     void InitResource();
 };

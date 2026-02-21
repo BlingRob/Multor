@@ -8,7 +8,7 @@ namespace Multor::Vulkan
 ShaderFactory::ShaderFactory(VkDevice& device)
 {
     //CreatedModules.reserve(10);
-    _device = device;
+    device_ = device;
     InitResource();
     glslang::InitializeProcess();
 }
@@ -16,13 +16,13 @@ ShaderFactory::ShaderFactory(VkDevice& device)
 ShaderFactory::~ShaderFactory()
 {
     glslang::FinalizeProcess();
-    for (auto& modul : CreatedModules)
-        vkDestroyShaderModule(_device, modul, nullptr);
+    for (auto& modul : createdModules_)
+        vkDestroyShaderModule(device_, modul, nullptr);
 }
 
 void ShaderFactory::InitResource()
 {
-    glslc_resource_limits = {
+    glslcResourceLimits_ = {
         /* .MaxLights = */ 32,
         /* .MaxClipPlanes = */ 6,
         /* .MaxTextureUnits = */ 32,
@@ -117,7 +117,7 @@ void ShaderFactory::InitResource()
         /* .maxMeshViewCountNV = */ 4,
         /* .maxDualSourceDrawBuffersEXT = */ 1};
 
-    glslc_resource_limits.limits = /* .limits = */ {
+    glslcResourceLimits_.limits = /* .limits = */ {
         /* .nonInductiveForLoops = */ 1,
         /* .whileLoops = */ 1,
         /* .doWhileLoops = */ 1,
@@ -177,7 +177,7 @@ ShaderFactory::createShader(std::string_view source, EShLanguage type)
     shader->setEnvClient(glslang::EShClientVulkan,
                          glslang::EShTargetVulkan_1_0);
     shader->setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
-    shader->parse(&glslc_resource_limits, 450, false, infoMsg);
+    shader->parse(&glslcResourceLimits_, 450, false, infoMsg);
     perror(shader->getInfoLog());
 
     return shader;
@@ -223,7 +223,7 @@ ShaderFactory::createModule(const std::vector<unsigned int>& spirv)
     createInfo.pCode    = spirv.data();
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(_device, &createInfo, nullptr, &shaderModule) !=
+    if (vkCreateShaderModule(device_, &createInfo, nullptr, &shaderModule) !=
         VK_SUCCESS)
         throw std::runtime_error("failed to create shader module!");
 
@@ -231,7 +231,7 @@ ShaderFactory::createModule(const std::vector<unsigned int>& spirv)
 }
 
 std::shared_ptr<ShaderLayout>
-ShaderFactory::createShader(std::string_view vertex, std::string_view fragment,
+ShaderFactory::CreateShader(std::string_view vertex, std::string_view fragment,
                             std::string_view geometry)
 {
     std::shared_ptr<ShaderLayout> _pSh = std::make_shared<ShaderLayout>();
@@ -247,8 +247,8 @@ ShaderFactory::createShader(std::string_view vertex, std::string_view fragment,
             shader  = createShader(vertex, EShLanguage::EShLangVertex);
             program = createProgram(std::move(shader));
             inter   = program->getIntermediate(EShLanguage::EShLangVertex);
-            CreatedModules.push_back(createModule(getSPIRV(inter)));
-            _pSh->addShaderModule(CreatedModules.back(), shader_type::vertex,
+            createdModules_.push_back(createModule(getSPIRV(inter)));
+            _pSh->AddShaderModule(createdModules_.back(), shader_type::vertex,
                                   std::move(program));
         }
 
@@ -257,8 +257,8 @@ ShaderFactory::createShader(std::string_view vertex, std::string_view fragment,
             shader  = createShader(fragment, EShLanguage::EShLangFragment);
             program = createProgram(std::move(shader));
             inter   = program->getIntermediate(EShLanguage::EShLangFragment);
-            CreatedModules.push_back(createModule(getSPIRV(inter)));
-            _pSh->addShaderModule(CreatedModules.back(), shader_type::fragment,
+            createdModules_.push_back(createModule(getSPIRV(inter)));
+            _pSh->AddShaderModule(createdModules_.back(), shader_type::fragment,
                                   std::move(program));
         }
 
@@ -267,14 +267,14 @@ ShaderFactory::createShader(std::string_view vertex, std::string_view fragment,
             shader  = createShader(geometry, EShLanguage::EShLangGeometry);
             program = createProgram(std::move(shader));
             inter   = program->getIntermediate(EShLanguage::EShLangGeometry);
-            CreatedModules.push_back(createModule(getSPIRV(inter)));
-            _pSh->addShaderModule(CreatedModules.back(), shader_type::geometry,
+            createdModules_.push_back(createModule(getSPIRV(inter)));
+            _pSh->AddShaderModule(createdModules_.back(), shader_type::geometry,
                                   std::move(program));
         }
 
-    createdVkShaders.push_back(_pSh);
+    createdVkShaders_.push_back(_pSh);
 
-    return createdVkShaders.back();
+    return createdVkShaders_.back();
 }
 
 } // namespace Multor::Vulkan

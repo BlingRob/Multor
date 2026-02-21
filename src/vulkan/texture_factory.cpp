@@ -6,7 +6,7 @@
 namespace Multor::Vulkan
 {
 
-VkImageView TextureFactory::createImageView(VkImage image, VkFormat format,
+VkImageView TextureFactory::CreateImageView(VkImage image, VkFormat format,
                                               VkImageAspectFlags aspectFlags)
 {
     VkImageViewCreateInfo viewInfo {};
@@ -28,7 +28,7 @@ VkImageView TextureFactory::createImageView(VkImage image, VkFormat format,
     return imageView;
 }
 
-VkSampler TextureFactory::createTextureSampler()
+VkSampler TextureFactory::CreateTextureSampler()
 {
     VkSampler textureSampler;
 
@@ -41,7 +41,7 @@ VkSampler TextureFactory::createTextureSampler()
     samplerInfo.addressModeW     = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.anisotropyEnable = VK_TRUE;
     VkPhysicalDeviceProperties properties {};
-    vkGetPhysicalDeviceProperties(physDev, &properties);
+    vkGetPhysicalDeviceProperties(physDev_, &properties);
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
     samplerInfo.borderColor   = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
@@ -60,7 +60,7 @@ VkSampler TextureFactory::createTextureSampler()
     return textureSampler;
 }
 
-Texture* TextureFactory::createTexture(Image* img)
+Texture* TextureFactory::CreateTexture(Image* img)
 {
     //std::shared_ptr<Image> img = ImageLoader::LoadTexture("A:/VulkanEngine/build/matrix.jpg");
 
@@ -70,7 +70,7 @@ Texture* TextureFactory::createTexture(Image* img)
     VkDeviceSize imageSize = img->w_ * img->h_ * 4;
 
     std::unique_ptr<Buffer> stBuf =
-        createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        CreateBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -79,47 +79,47 @@ Texture* TextureFactory::createTexture(Image* img)
     std::memcpy(data, img->mdata_, static_cast<size_t>(imageSize));
     vkUnmapMemory(dev_, stBuf->bufferMemory_);
 
-    std::pair<VkImage, VkDeviceMemory> texture = createImage(
+    std::pair<VkImage, VkDeviceMemory> texture = CreateImage(
         img->w_, img->h_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    _executer->transitionImageLayout(texture.first, VK_FORMAT_R8G8B8A8_SRGB,
+    executer_->TransitionImageLayout(texture.first, VK_FORMAT_R8G8B8A8_SRGB,
                                      VK_IMAGE_LAYOUT_UNDEFINED,
                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    _executer->copyBufferToImage(stBuf->buffer_, texture.first,
+    executer_->CopyBufferToImage(stBuf->buffer_, texture.first,
                                  static_cast<uint32_t>(img->w_),
                                  static_cast<uint32_t>(img->h_));
-    _executer->transitionImageLayout(texture.first, VK_FORMAT_R8G8B8A8_SRGB,
+    executer_->TransitionImageLayout(texture.first, VK_FORMAT_R8G8B8A8_SRGB,
                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     Texture* val = new Texture;
     val->dev_      = dev_;
     val->img_      = texture.first;
-    val->view_     = createTextureImageView(texture.first);
-    val->sampler_  = createTextureSampler();
+    val->view_     = CreateTextureImageView(texture.first);
+    val->sampler_  = CreateTextureSampler();
     val->devMem_   = texture.second;
     return val;
 }
 
 std::unique_ptr<Texture>
-TextureFactory::createDepthTexture(std::size_t width, std::size_t height)
+TextureFactory::CreateDepthTexture(std::size_t width, std::size_t height)
 {
     std::unique_ptr<Texture> depthTex = std::make_unique<Texture>();
     depthTex->dev_                      = dev_;
 
-    VkFormat depthFormat = findDepthFormat();
+    VkFormat depthFormat = FindDepthFormat();
     auto [depth, depthMemory] =
-        createImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+        CreateImage(width, height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
                     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     depthTex->view_ =
-        createImageView(depth, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        CreateImageView(depth, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
     depthTex->img_    = depth;
     depthTex->devMem_ = depthMemory;
 
-    _executer->transitionImageLayout(
+    executer_->TransitionImageLayout(
         depthTex->img_, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
@@ -127,7 +127,7 @@ TextureFactory::createDepthTexture(std::size_t width, std::size_t height)
 }
 
 std::pair<VkImage, VkDeviceMemory>
-TextureFactory::createImage(uint32_t width, uint32_t height, VkFormat format,
+TextureFactory::CreateImage(uint32_t width, uint32_t height, VkFormat format,
                               VkImageTiling tiling, VkImageUsageFlags usage,
                               VkMemoryPropertyFlags properties)
 {
@@ -168,9 +168,9 @@ TextureFactory::createImage(uint32_t width, uint32_t height, VkFormat format,
     return image;
 }
 
-VkImageView TextureFactory::createTextureImageView(VkImage img)
+VkImageView TextureFactory::CreateTextureImageView(VkImage img)
 {
-    return createImageView(img, VK_FORMAT_R8G8B8A8_SRGB,
+    return CreateImageView(img, VK_FORMAT_R8G8B8A8_SRGB,
                            VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
@@ -182,7 +182,7 @@ TextureFactory::findSupportedFormat(const std::vector<VkFormat>& candidates,
     for (VkFormat format : candidates)
         {
             VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(physDev, format, &props);
+            vkGetPhysicalDeviceFormatProperties(physDev_, format, &props);
             if (tiling == VK_IMAGE_TILING_LINEAR &&
                 (props.linearTilingFeatures & features) == features)
                 return format;
@@ -194,7 +194,7 @@ TextureFactory::findSupportedFormat(const std::vector<VkFormat>& candidates,
     throw std::runtime_error("failed to find supported format!");
 }
 
-VkFormat TextureFactory::findDepthFormat()
+VkFormat TextureFactory::FindDepthFormat()
 {
     return findSupportedFormat({VK_FORMAT_D32_SFLOAT,
                                 VK_FORMAT_D32_SFLOAT_S8_UINT,

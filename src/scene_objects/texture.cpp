@@ -8,7 +8,7 @@ BaseTexture::BaseTexture(const std::string& name, const std::string& path,
                          Texture_Types                        type,
                          std::vector<std::shared_ptr<Image> > images)
 {
-    setName(name);
+    SetName(name);
     path_ = path;
     type_ = type;
     imgs_ = images;

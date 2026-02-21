@@ -3,7 +3,7 @@
 project (gui_subsystem)
 set(CMAKE_CXX_STANDARD 23)
 
-SET(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Window.cpp)
+SET(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/window.cpp)
 
 ##########################Glm##############################
 include_directories(${CMAKE_SOURCE_DIR}/dependencies/glm/)

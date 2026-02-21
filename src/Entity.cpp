@@ -6,12 +6,12 @@
 namespace Multor
 {
 
-std::string_view Entity::getName() const
+std::string_view Entity::GetName() const
 {
     return std::string_view(name_);
 }
 
-void Entity::setName(std::string_view name)
+void Entity::SetName(std::string_view name)
 {
     name_ = std::string(name);
 }

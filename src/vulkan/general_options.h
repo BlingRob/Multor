@@ -3,7 +3,7 @@
 #pragma once
 
 #include "../logger/logger.h"
-#include "../gui/Window.h"
+#include "../gui/window.h"
 
 #include <vector>
 #include <exception>

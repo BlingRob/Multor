@@ -11,7 +11,7 @@ uint32_t BufferFactory::findMemoryType(uint32_t              typeFilter,
                                          VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physDev, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(physDev_, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
         if ((typeFilter & (1 << i)) &&
@@ -23,7 +23,7 @@ uint32_t BufferFactory::findMemoryType(uint32_t              typeFilter,
 }
 
 std::unique_ptr<Buffer>
-BufferFactory::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
+BufferFactory::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                               VkMemoryPropertyFlags properties)
 {
     std::unique_ptr<Buffer> buf = std::make_unique<Buffer>();
@@ -57,12 +57,12 @@ BufferFactory::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 }
 
 std::unique_ptr<VertexBuffer>
-BufferFactory::createVertexBuffer(Vertexes* vert)
+BufferFactory::CreateVertexBuffer(Vertexes* vert)
 {
     VkDeviceSize bufferSize = sizeof(Vertex) * vert->GetSize();
 
     std::unique_ptr<Buffer> stBuf =
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -71,24 +71,24 @@ BufferFactory::createVertexBuffer(Vertexes* vert)
     std::memcpy(data, vert->GetVertexes(), bufferSize);
     vkUnmapMemory(dev_, stBuf->bufferMemory_);
 
-    std::unique_ptr<Buffer> vertBuf = createBuffer(
+    std::unique_ptr<Buffer> vertBuf = CreateBuffer(
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    _executer->copyBuffer(stBuf->buffer_, vertBuf->buffer_, bufferSize);
+    executer_->CopyBuffer(stBuf->buffer_, vertBuf->buffer_, bufferSize);
 
     return std::unique_ptr<VertexBuffer>(
         new VertexBuffer({std::move(vertBuf), Vertex::getBindingDescription(),
                           Vertex::getAttributeDescriptions()}));
 }
 
-std::unique_ptr<Buffer> BufferFactory::createIndexBuffer(Vertexes* vert)
+std::unique_ptr<Buffer> BufferFactory::CreateIndexBuffer(Vertexes* vert)
 {
     VkDeviceSize bufferSize = sizeof(uint32_t) * vert->GetIndices().size();
 
     std::unique_ptr<Buffer> stBuf =
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -97,30 +97,30 @@ std::unique_ptr<Buffer> BufferFactory::createIndexBuffer(Vertexes* vert)
     std::memcpy(data, vert->GetIndices().data(), bufferSize);
     vkUnmapMemory(dev_, stBuf->bufferMemory_);
 
-    std::unique_ptr<Buffer> IndexBuf = createBuffer(
+    std::unique_ptr<Buffer> IndexBuf = CreateBuffer(
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    _executer->copyBuffer(stBuf->buffer_, IndexBuf->buffer_, bufferSize);
+    executer_->CopyBuffer(stBuf->buffer_, IndexBuf->buffer_, bufferSize);
 
     return IndexBuf;
 }
 
 std::unique_ptr<Buffer>
-BufferFactory::createUniformBuffer(VkDeviceSize bufferSize)
+BufferFactory::CreateUniformBuffer(VkDeviceSize bufferSize)
 {
-    return createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    return CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 std::unique_ptr<Buffer>
-BufferFactory::createMaterialBuffer(Material* mat)
+BufferFactory::CreateMaterialBuffer(Material* mat)
 {
     VkDeviceSize bufferSize = sizeof(*mat);
 
     std::unique_ptr<Buffer> stBuf =
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -129,11 +129,11 @@ BufferFactory::createMaterialBuffer(Material* mat)
     std::memcpy(data, mat, sizeof(*mat));
     vkUnmapMemory(dev_, stBuf->bufferMemory_);
 
-    std::unique_ptr<Buffer> materialBuf = createBuffer(
+    std::unique_ptr<Buffer> materialBuf = CreateBuffer(
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    _executer->copyBuffer(stBuf->buffer_, materialBuf->buffer_, bufferSize);
+    executer_->CopyBuffer(stBuf->buffer_, materialBuf->buffer_, bufferSize);
 
     return materialBuf;
 }

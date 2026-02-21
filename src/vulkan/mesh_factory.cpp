@@ -6,7 +6,7 @@ namespace Multor::Vulkan
 {
 
 std::unique_ptr<Mesh>
-MeshFactory::createMesh(std::unique_ptr<BaseMesh> mesh)
+MeshFactory::CreateMesh(std::unique_ptr<BaseMesh> mesh)
 {
     std::unique_ptr<Mesh> vk_mesh = std::make_unique<Mesh>();
 
@@ -14,8 +14,8 @@ MeshFactory::createMesh(std::unique_ptr<BaseMesh> mesh)
     constexpr VkDeviceSize TransBufObj = sizeof(UBOs::Transform);
     constexpr VkDeviceSize ViewBufObj  = sizeof(UBOs::ViewPosition);
 
-    vk_mesh->vertBuffer_  = createVertexBuffer(mesh->GetVertexes());
-    vk_mesh->indexBuffer_ = createIndexBuffer(mesh->GetVertexes());
+    vk_mesh->vertBuffer_  = CreateVertexBuffer(mesh->GetVertexes());
+    vk_mesh->indexBuffer_ = CreateIndexBuffer(mesh->GetVertexes());
     vk_mesh->indexesSize_ = mesh->GetVertexes()->GetIndices().size();
 
     auto [texBegin, texEnd] = mesh->GetTextures();
@@ -29,7 +29,7 @@ MeshFactory::createMesh(std::unique_ptr<BaseMesh> mesh)
                 continue;
 
             vk_mesh->textures_.push_back(
-                std::shared_ptr<Texture>(createTexture(images[0].get())));
+                std::shared_ptr<Texture>(CreateTexture(images[0].get())));
         }
     /*
 	Vkmesh->matrixes_ = createBuffer(TransBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -47,12 +47,12 @@ MeshFactory::createMesh(std::unique_ptr<BaseMesh> mesh)
 }
 
 std::unique_ptr<TransformUBO>
-MeshFactory::createUBOBuffers(std::size_t nFrames)
+MeshFactory::CreateUBOBuffers(std::size_t nFrames)
 {
     std::unique_ptr<TransformUBO> ubo = std::make_unique<TransformUBO>(dev_);
     for (std::size_t i = 0; i < nFrames; ++i)
         {
-            ubo->matrixes_.push_back(createBuffer(
+            ubo->matrixes_.push_back(CreateBuffer(
                 ubo->TransBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));

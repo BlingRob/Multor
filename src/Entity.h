@@ -15,10 +15,10 @@ class Entity
 {
 public:
     /// \brief Name getter
-    std::string_view getName() const;
+    std::string_view GetName() const;
 
     /// \brief Name setter
-    void setName(std::string_view name);
+    void SetName(std::string_view name);
 
 private:
     /// \brief Name

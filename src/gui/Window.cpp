@@ -1,4 +1,4 @@
-/// \file Window.cpp
+/// \file window.cpp
 
 #include "Window.h"
 
@@ -91,7 +91,7 @@ bool Window::ProcEvents()
                                     lastX_ = static_cast<float>(e.button.x);
                                     lastY_ = static_cast<float>(e.button.y);
 
-                                    pContr_->cam->ProcessMouseMovement(xoffset,
+                                    pContr_->cam_->ProcessMouseMovement(xoffset,
                                                                        yoffset);
                                     changedView_ = true;
                                     changedProj_ = true;
@@ -100,7 +100,7 @@ bool Window::ProcEvents()
                         }
                         case SDL_MOUSEWHEEL: {
                             if (clicked_)
-                                pContr_->cam->ProcessMouseScroll(
+                                pContr_->cam_->ProcessMouseScroll(
                                     static_cast<float>(e.wheel.y));
                             changedProj_ = true;
                             break;
@@ -119,8 +119,8 @@ bool Window::ProcEvents()
 
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
 
-                        SCR_WIDTH  = static_cast<uint32_t>(e.window.data1);
-                        SCR_HEIGHT = static_cast<uint32_t>(e.window.data2);
+                        scrWidth_  = static_cast<uint32_t>(e.window.data1);
+                        scrHeight_ = static_cast<uint32_t>(e.window.data2);
                         ((*pSigTable_)[0])(nullptr);
                         changedProj_ = true;
                         break;
@@ -140,42 +140,42 @@ bool Window::ProcEvents()
                 }
         }
     //Apply keys_
-    do_movement();
-    change_matrixes();
+    doMovement();
+    changeMatrices();
 
     return true;
 }
 
-void Window::do_movement()
+void Window::doMovement()
 {
     // Camera controls
     if (keys_[SDL_SCANCODE_W])
-        pContr_->cam->ProcessKeyboard(Camera::Camera_Movement::FORWARD,
-                                      pContr_->dt);
+        pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::FORWARD,
+                                       pContr_->dt_);
     if (keys_[SDL_SCANCODE_S])
-        pContr_->cam->ProcessKeyboard(Camera::Camera_Movement::BACKWARD,
-                                      pContr_->dt);
+        pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::BACKWARD,
+                                       pContr_->dt_);
     if (keys_[SDL_SCANCODE_A])
-        pContr_->cam->ProcessKeyboard(Camera::Camera_Movement::LEFT,
-                                      pContr_->dt);
+        pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::LEFT,
+                                       pContr_->dt_);
     if (keys_[SDL_SCANCODE_D])
-        pContr_->cam->ProcessKeyboard(Camera::Camera_Movement::RIGHT,
-                                      pContr_->dt);
+        pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::RIGHT,
+                                       pContr_->dt_);
     changedView_ = true;
 }
 
-void Window::change_matrixes()
+void Window::changeMatrices()
 {
     if (changedProj_)
         {
-            *pContr_->Projection = glm::perspective(
-                glm::radians(pContr_->cam->Zoom),
-                (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 150.0f);
+            *pContr_->projection_ = glm::perspective(
+                glm::radians(pContr_->cam_->zoom_),
+                (float)scrWidth_ / (float)scrHeight_, 0.1f, 150.0f);
             changedProj_ = false;
         }
     if (changedView_)
         {
-            *pContr_->View = pContr_->cam->GetViewMatrix();
+            *pContr_->view_ = pContr_->cam_->GetViewMatrix();
             changedView_   = false;
         }
 }

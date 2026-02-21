@@ -1,4 +1,4 @@
-/// \file Node.h
+/// \file node.h
 
 #pragma once
 #ifndef NODE_H

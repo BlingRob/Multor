@@ -81,11 +81,11 @@ int main(int argc, char* args[])
                             .count();
 
                     m1->tr_->updateModel(
-                        app.GetRenderer()->getCurFrame(),
+                        app.GetRenderer()->GetCurFrame(),
                         glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f),
                                     glm::vec3(0.0f, 1.0f, 0.0f)));
                     m2->tr_->updateModel(
-                        app.GetRenderer()->getCurFrame(),
+                        app.GetRenderer()->GetCurFrame(),
                         glm::translate(glm::mat4(1.0f),
                                        glm::vec3(1.2f, 0.0f, 0.0f)) *
                             glm::rotate(glm::mat4(1.0f),

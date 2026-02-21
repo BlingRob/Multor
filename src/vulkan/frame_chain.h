@@ -25,19 +25,19 @@ public:
 protected:
     Logging::Logger& logger_;
 
-    VkRenderPass   renderPass;
-    VkSwapchainKHR swapChain;
-    VkFormat       swapChainImageFormat;
-    VkExtent2D     swapChainExtent;
+    VkRenderPass   renderPass_          = VK_NULL_HANDLE;
+    VkSwapchainKHR swapChain_           = VK_NULL_HANDLE;
+    VkFormat       swapChainImageFormat_;
+    VkExtent2D     swapChainExtent_;
 
-    std::unique_ptr<Texture> DepthImg;
+    std::unique_ptr<Texture> depthImg_;
 
-    std::vector<VkImage>       swapChainImages;
-    std::vector<VkImageView>   swapChainImageViews;
-    std::vector<VkFramebuffer> swapChainFramebuffers;
+    std::vector<VkImage>       swapChainImages_;
+    std::vector<VkImageView>   swapChainImageViews_;
+    std::vector<VkFramebuffer> swapChainFramebuffers_;
 
-    std::shared_ptr<CommandExecuter> _executer;
-    std::unique_ptr<MeshFactory>   MeshFac;
+    std::shared_ptr<CommandExecuter> executer_;
+    std::unique_ptr<MeshFactory>     meshFactory_;
 
     void createSwapChain();
     void createImageViews();

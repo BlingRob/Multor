@@ -13,10 +13,10 @@ public:
     Syncer(VkDevice& device);
     ~Syncer();
 
-    VkSemaphore imageAvailableSemaphores;
-    VkSemaphore renderFinishedSemaphores;
-    VkFence     inFlightFences;
-    VkFence     imagesInFlight;
+    VkSemaphore imageAvailableSemaphores_ = VK_NULL_HANDLE;
+    VkSemaphore renderFinishedSemaphores_ = VK_NULL_HANDLE;
+    VkFence     inFlightFences_           = VK_NULL_HANDLE;
+    VkFence     imagesInFlight_           = VK_NULL_HANDLE;
 
 private:
     VkDevice m_device;

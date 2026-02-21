@@ -24,19 +24,19 @@ public:
         : BufferFactory(dev, PhysDev, ex)
     {
     }
-    Texture*                 createTexture(Image* img);
-    std::unique_ptr<Texture> createDepthTexture(std::size_t width,
+    Texture*                 CreateTexture(Image* img);
+    std::unique_ptr<Texture> CreateDepthTexture(std::size_t width,
                                                   std::size_t height);
 
-    VkImageView createImageView(VkImage image, VkFormat format,
+    VkImageView CreateImageView(VkImage image, VkFormat format,
                                 VkImageAspectFlags aspectFlags);
     std::pair<VkImage, VkDeviceMemory>
-                createImage(uint32_t width, uint32_t height, VkFormat format,
+                CreateImage(uint32_t width, uint32_t height, VkFormat format,
                             VkImageTiling tiling, VkImageUsageFlags usage,
                             VkMemoryPropertyFlags properties);
-    VkImageView createTextureImageView(VkImage img);
-    VkSampler   createTextureSampler();
-    VkFormat    findDepthFormat();
+    VkImageView CreateTextureImageView(VkImage img);
+    VkSampler   CreateTextureSampler();
+    VkFormat    FindDepthFormat();
 
 private:
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates,

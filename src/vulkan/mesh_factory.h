@@ -1,9 +1,9 @@
-/// \file Mesh.h
+/// \file mesh.h
 
 #pragma once
 
 #include "mesh.h"
-#include "../scene_objects/Mesh.h"
+#include "../scene_objects/mesh.h"
 
 #include "objects/vertex.h"
 #include "texture_factory.h"
@@ -20,8 +20,8 @@ public:
         : TextureFactory(dev, physDev, std::move(ex))
     {
     }
-    std::unique_ptr<Mesh>       createMesh(std::unique_ptr<BaseMesh> mesh);
-    std::unique_ptr<TransformUBO> createUBOBuffers(std::size_t nFrames);
+    std::unique_ptr<Mesh>       CreateMesh(std::unique_ptr<BaseMesh> mesh);
+    std::unique_ptr<TransformUBO> CreateUBOBuffers(std::size_t nFrames);
 };
 
 } // namespace Multor::Vulkan

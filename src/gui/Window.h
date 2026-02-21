@@ -1,4 +1,4 @@
-/// \file Windows.h
+/// \file windows.h
 
 #pragma once
 #ifndef WINDOWS_H
@@ -36,7 +36,7 @@ public:
     //Window(std::shared_ptr<Position_Controller>);
 
     //Size of window
-    uint32_t SCR_WIDTH = 800, SCR_HEIGHT = 800;
+    uint32_t scrWidth_ = 800, scrHeight_ = 800;
 
     ~Window();
 
@@ -56,8 +56,8 @@ private:
     bool  changedProj_ = false;
     bool  changedView_ = false;
     //callbacks
-    inline void do_movement();
-    inline void change_matrixes();
+    inline void doMovement();
+    inline void changeMatrices();
 
     //Data for connect with render engine
     std::shared_ptr<Position_Controller> pContr_;

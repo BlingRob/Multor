@@ -11,15 +11,15 @@ namespace Multor
 
 class Chronometr
 {
-    std::chrono::time_point<std::chrono::high_resolution_clock> startProgram,
-        LastTime, CurrentTime;
-    double dt;
-    double milli = 1000.0;
+    std::chrono::time_point<std::chrono::high_resolution_clock> startProgram_,
+        lastTime_, currentTime_;
+    double dt_;
+    double milli_ = 1000.0;
 
 public:
-    Chronometr() : dt(0.0)
+    Chronometr() : dt_(0.0)
     {
-        CurrentTime = LastTime = startProgram =
+        currentTime_ = lastTime_ = startProgram_ =
             std::chrono::high_resolution_clock::now();
     }
     /*Return time since start programme*/

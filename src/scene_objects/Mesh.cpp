@@ -1,5 +1,5 @@
-/// \file Mesh.cpp
-#include "Mesh.h"
+/// \file mesh.cpp
+#include "mesh.h"
 
 namespace Multor
 {

@@ -6,9 +6,9 @@
 
 #include "vulkan/renderer.h"
 
-#include "gui/Window.h"
+#include "gui/window.h"
 #include "transformation.h"
-#include "utils/Time.h"
+#include "utils/time.h"
 #include "logger/logger.h"
 #include "configure.h"
 
@@ -42,11 +42,11 @@ private:
     //Pointer of window class
     std::shared_ptr<Window> pWindow_;
     //Vulkan
-    std::shared_ptr<Vulkan::Renderer> _pRenderer;
+    std::shared_ptr<Vulkan::Renderer> pRenderer_;
     //Scene
     //std::shared_ptr<std::unique_ptr<Scene>> _ppScene;
     //Time
-    Chronometr chron;
+    Chronometr chron_;
     //GUI
     //std::unique_ptr<GUI> gui;
 
@@ -54,7 +54,7 @@ private:
     //std::unique_ptr<ResourceManager> _pResMgr;
 
     //SignalsTable
-    std::array<std::function<void(void*)>, 5> signals;
+    std::array<std::function<void(void*)>, 5> signals_;
 };
 
 } // namespace Multor

@@ -5,7 +5,7 @@
 namespace Multor::Vulkan
 {
 
-void CommandExecuter::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
+void CommandExecuter::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
                                  VkDeviceSize size)
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
@@ -17,7 +17,7 @@ void CommandExecuter::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer,
     endSingleTimeCommands(commandBuffer);
 }
 
-void CommandExecuter::transitionImageLayout(VkImage image, VkFormat format,
+void CommandExecuter::TransitionImageLayout(VkImage image, VkFormat format,
                                             VkImageLayout oldLayout,
                                             VkImageLayout newLayout)
 {
@@ -81,7 +81,7 @@ void CommandExecuter::transitionImageLayout(VkImage image, VkFormat format,
     endSingleTimeCommands(commandBuffer);
 }
 
-void CommandExecuter::copyBufferToImage(VkBuffer buffer, VkImage image,
+void CommandExecuter::CopyBufferToImage(VkBuffer buffer, VkImage image,
                                         uint32_t width, uint32_t height)
 {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();

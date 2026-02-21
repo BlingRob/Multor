@@ -11,21 +11,21 @@ FrameChain::FrameChain(std::shared_ptr<Window> pWnd)
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
-    _executer =
+    executer_ =
         std::make_shared<CommandExecuter>(device, commandPool, graphicsQueue);
-    MeshFac = std::make_unique<MeshFactory>(device, physicDev, _executer);
+    meshFactory_ = std::make_unique<MeshFactory>(device, physicDev, executer_);
     createSwapChain();
     createImageViews();
     createRenderPass();
-    DepthImg = MeshFac->createDepthTexture(swapChainExtent.width,
-                                           swapChainExtent.height);
+    depthImg_ = meshFactory_->CreateDepthTexture(swapChainExtent_.width,
+                                                 swapChainExtent_.height);
     createFramebuffers();
 }
 
 FrameChain::~FrameChain()
 {
-    MeshFac.reset();
-    _executer.reset();
+    meshFactory_.reset();
+    executer_.reset();
     CleanUpSwapChain();
 }
 
@@ -124,28 +124,28 @@ void FrameChain::createSwapChain()
     createInfo.clipped        = VK_TRUE;
     createInfo.oldSwapchain   = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) !=
+    if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain_) !=
         VK_SUCCESS)
         throw std::runtime_error("Failed to create swap chain!");
     //Get window's images
-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
-    swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount,
-                            swapChainImages.data());
+    vkGetSwapchainImagesKHR(device, swapChain_, &imageCount, nullptr);
+    swapChainImages_.resize(imageCount);
+    vkGetSwapchainImagesKHR(device, swapChain_, &imageCount,
+                            swapChainImages_.data());
 
-    swapChainImageFormat = surfaceFormat.format;
-    swapChainExtent      = extent;
+    swapChainImageFormat_ = surfaceFormat.format;
+    swapChainExtent_      = extent;
 }
 
 void FrameChain::createImageViews()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
-    swapChainImageViews.resize(swapChainImages.size());
-    for (size_t i = 0; i < swapChainImages.size(); ++i)
+    swapChainImageViews_.resize(swapChainImages_.size());
+    for (size_t i = 0; i < swapChainImages_.size(); ++i)
         //Create "descriptor" of window's buffer images
-        swapChainImageViews[i] =
-            MeshFac->createImageView(swapChainImages[i], swapChainImageFormat,
+        swapChainImageViews_[i] =
+            meshFactory_->CreateImageView(swapChainImages_[i], swapChainImageFormat_,
                                      VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
@@ -155,7 +155,7 @@ void FrameChain::createRenderPass()
 
     //Options for output images
     VkAttachmentDescription colorAttachment {};
-    colorAttachment.format         = swapChainImageFormat;
+    colorAttachment.format         = swapChainImageFormat_;
     colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
@@ -169,7 +169,7 @@ void FrameChain::createRenderPass()
     colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     //Depth attachment
     VkAttachmentDescription depthAttachment {};
-    depthAttachment.format         = MeshFac->findDepthFormat();
+    depthAttachment.format         = meshFactory_->FindDepthFormat();
     depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -215,7 +215,7 @@ void FrameChain::createRenderPass()
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies   = &dependency;
 
-    if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) !=
+    if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass_) !=
         VK_SUCCESS)
         throw std::runtime_error("failed to create render pass!");
 }
@@ -224,26 +224,26 @@ void FrameChain::createFramebuffers()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
-    swapChainFramebuffers.resize(swapChainImageViews.size());
+    swapChainFramebuffers_.resize(swapChainImageViews_.size());
     //bind and create framebuffer
-    for (std::size_t i = 0; i < swapChainImageViews.size(); ++i)
+    for (std::size_t i = 0; i < swapChainImageViews_.size(); ++i)
         {
-            std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
-                                                      DepthImg->view_};
+            std::array<VkImageView, 2> attachments = {swapChainImageViews_[i],
+                                                      depthImg_->view_};
 
             VkFramebufferCreateInfo framebufferInfo {};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             framebufferInfo.pNext = nullptr;
-            framebufferInfo.renderPass = renderPass;
+            framebufferInfo.renderPass = renderPass_;
             framebufferInfo.attachmentCount =
                 static_cast<uint32_t>(attachments.size());
             framebufferInfo.pAttachments = attachments.data();
-            framebufferInfo.width        = swapChainExtent.width;
-            framebufferInfo.height       = swapChainExtent.height;
+            framebufferInfo.width        = swapChainExtent_.width;
+            framebufferInfo.height       = swapChainExtent_.height;
             framebufferInfo.layers       = 1;
 
             if (vkCreateFramebuffer(device, &framebufferInfo, nullptr,
-                                    &swapChainFramebuffers[i]) != VK_SUCCESS)
+                                    &swapChainFramebuffers_[i]) != VK_SUCCESS)
                 throw std::runtime_error("failed to create framebuffer!");
         }
 }
@@ -254,20 +254,20 @@ void FrameChain::CleanUpSwapChain()
 
     vkDeviceWaitIdle(device);
 
-    DepthImg.reset();
+    depthImg_.reset();
 
-    for (auto& framebuffer : swapChainFramebuffers)
+    for (auto& framebuffer : swapChainFramebuffers_)
         vkDestroyFramebuffer(device, framebuffer, nullptr), framebuffer = 0;
 
-    vkDestroyRenderPass(device, renderPass, nullptr),
-        renderPass = VK_NULL_HANDLE;
+    vkDestroyRenderPass(device, renderPass_, nullptr),
+        renderPass_ = VK_NULL_HANDLE;
 
-    for (auto& imageView : swapChainImageViews)
+    for (auto& imageView : swapChainImageViews_)
         vkDestroyImageView(device, imageView, nullptr),
             imageView = VK_NULL_HANDLE;
 
-    vkDestroySwapchainKHR(device, swapChain, nullptr),
-        swapChain = VK_NULL_HANDLE;
+    vkDestroySwapchainKHR(device, swapChain_, nullptr),
+        swapChain_ = VK_NULL_HANDLE;
 }
 
 void FrameChain::RecreateSwapChain()
@@ -281,8 +281,8 @@ void FrameChain::RecreateSwapChain()
     createSwapChain();
     createImageViews();
     createRenderPass();
-    DepthImg = MeshFac->createDepthTexture(swapChainExtent.width,
-                                           swapChainExtent.height);
+    depthImg_ = meshFactory_->CreateDepthTexture(swapChainExtent_.width,
+                                                 swapChainExtent_.height);
     createFramebuffers();
 }
 

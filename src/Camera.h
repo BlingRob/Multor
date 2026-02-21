@@ -34,62 +34,62 @@ public:
     };
 
     /// \brief Camera attributes
-    glm::vec3 Position;
-    glm::vec3 Front;
-    glm::vec3 Up;
-    glm::vec3 Right;
-    glm::vec3 WorldUp;
+    glm::vec3 position_;
+    glm::vec3 front_;
+    glm::vec3 up_;
+    glm::vec3 right_;
+    glm::vec3 worldUp_;
 
     /// \brief Euler's angels
-    float Yaw;
-    float Pitch;
+    float yaw_;
+    float pitch_;
 
     /// \brief Camera's options
-    float MovementSpeed;
-    float MouseSensitivity;
-    float Zoom;
+    float movementSpeed_;
+    float mouseSensitivity_;
+    float zoom_;
 
     /// \brief Limits
-    static constexpr float PitchLimit    = glm::radians(89.0f);
-    static constexpr float ZoomLowLimit  = 1.0f;
-    static constexpr float ZoomHighLimit = 45.0f;
+    static constexpr float pitchLimit_    = glm::radians(89.0f);
+    static constexpr float zoomLowLimit_  = 1.0f;
+    static constexpr float zoomHighLimit_ = 45.0f;
 
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
            glm::vec3 target   = glm::vec3(0.0f, 0.0f, 0.0f),
            glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW,
            float pitch = PITCH)
-        : MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+        : movementSpeed_(SPEED), mouseSensitivity_(SENSITIVITY), zoom_(ZOOM)
     {
-        Position = position;
-        Front    = target;
-        WorldUp  = glm::normalize(up);
-        Yaw      = glm::radians(yaw);
-        Pitch    = glm::radians(pitch);
+        position_ = position;
+        front_    = target;
+        worldUp_  = glm::normalize(up);
+        yaw_      = glm::radians(yaw);
+        pitch_    = glm::radians(pitch);
         updateCameraVectors();
     }
 
     inline glm::mat4 GetViewMatrix()
     {
-        return glm::lookAt(Position, Position + Front, Up);
+        return glm::lookAt(position_, position_ + front_, up_);
     }
 
     //Process key pressing
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
-        float velocity = MovementSpeed * deltaTime;
+        float velocity = movementSpeed_ * deltaTime;
         switch (direction)
             {
                 case Camera_Movement::FORWARD:
-                    Position += Front * velocity;
+                    position_ += front_ * velocity;
                     break;
                 case Camera_Movement::BACKWARD:
-                    Position -= Front * velocity;
+                    position_ -= front_ * velocity;
                     break;
                 case Camera_Movement::LEFT:
-                    Position -= Right * velocity;
+                    position_ -= right_ * velocity;
                     break;
                 case Camera_Movement::RIGHT:
-                    Position += Right * velocity;
+                    position_ += right_ * velocity;
                     break;
             }
     }
@@ -98,16 +98,16 @@ public:
     void ProcessMouseMovement(float xoffset, float yoffset,
                               bool constrainPitch = true)
     {
-        xoffset *= MouseSensitivity;
-        yoffset *= MouseSensitivity;
+        xoffset *= mouseSensitivity_;
+        yoffset *= mouseSensitivity_;
 
-        Yaw += glm::radians(xoffset);
-        Pitch += glm::radians(yoffset);
+        yaw_ += glm::radians(xoffset);
+        pitch_ += glm::radians(yoffset);
 
         // Controll pitch range
         if (constrainPitch)
-            if (glm::abs(Pitch) > PitchLimit)
-                Pitch = std::copysignf(PitchLimit, Pitch);
+            if (glm::abs(pitch_) > pitchLimit_)
+                pitch_ = std::copysignf(pitchLimit_, pitch_);
 
         // Update vectors
         updateCameraVectors();
@@ -116,12 +116,12 @@ public:
     // Process mouse scroll
     void ProcessMouseScroll(float yoffset)
     {
-        if (Zoom >= ZoomLowLimit && Zoom <= ZoomHighLimit)
-            Zoom -= yoffset;
-        else if (Zoom <= ZoomLowLimit)
-            Zoom = ZoomLowLimit;
-        else if (Zoom >= ZoomHighLimit)
-            Zoom = ZoomHighLimit;
+        if (zoom_ >= zoomLowLimit_ && zoom_ <= zoomHighLimit_)
+            zoom_ -= yoffset;
+        else if (zoom_ <= zoomLowLimit_)
+            zoom_ = zoomLowLimit_;
+        else if (zoom_ >= zoomHighLimit_)
+            zoom_ = zoomHighLimit_;
     }
 
 private:
@@ -129,13 +129,13 @@ private:
     void updateCameraVectors()
     {
         // Process new right vector
-        Front.x = cos(Yaw) * cos(Pitch);
-        Front.y = sin(Pitch);
-        Front.z = sin(Yaw) * cos(Pitch);
-        Front   = glm::normalize(Front);
+        front_.x = cos(yaw_) * cos(pitch_);
+        front_.y = sin(pitch_);
+        front_.z = sin(yaw_) * cos(pitch_);
+        front_   = glm::normalize(front_);
         // Reculculation right and up vectors
-        Right = glm::cross(Front, WorldUp);
-        Up    = glm::cross(Right, Front);
+        right_ = glm::cross(front_, worldUp_);
+        up_    = glm::cross(right_, front_);
     }
 };
 
