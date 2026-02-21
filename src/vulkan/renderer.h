@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <list>
 #include <memory>
+#include <string_view>
 
 #include <vulkan/vulkan.h>
 
@@ -27,6 +28,14 @@ public:
     ~Renderer();
 
     std::shared_ptr<Mesh> AddMesh(BaseMesh* mesh);
+    std::shared_ptr<ShaderLayout>
+    CreateShaderFromSource(std::string_view vertex, std::string_view fragment,
+                           std::string_view geometry = "");
+    std::shared_ptr<ShaderLayout>
+    CreateShaderFromFiles(std::string_view vertexPath,
+                          std::string_view fragmentPath,
+                          std::string_view geometryPath = "");
+    void UseShader(const std::shared_ptr<ShaderLayout>& shader);
 
     void Draw();
     void Update();
@@ -60,6 +69,7 @@ private:
 
     std::unique_ptr<ShaderFactory>              ShFactory;
     std::vector<std::shared_ptr<ShaderLayout> > shaders_;
+    std::shared_ptr<ShaderLayout>               activeShader_;
 
     VkPipelineLayout      pipelineLayout;
     VkPipeline            graphicsPipeline;

@@ -3,6 +3,7 @@
 #include "renderer.h"
 
 #include <chrono>
+#include <unordered_map>
 
 namespace Multor::Vulkan
 {
@@ -13,29 +14,82 @@ Renderer::Renderer(std::shared_ptr<Window> pWnd)
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
     
-    ShFactory = std::make_unique<ShaderFactory>(device);
-    shaders_.push_back(
-        ShFactory->createShader(LoadTextFile("../../shaders/Base.vs"),
-                                LoadTextFile("../../shaders/Base.frag")));
+    ShFactory    = std::make_unique<ShaderFactory>(device);
+    activeShader_ =
+        CreateShaderFromFiles("../../shaders/Base.vs", "../../shaders/Base.frag");
 
+    createDescriptorSetLayout();
+    createGraphicsPipeline();
     createDescriptorPool();
     createDescriptorSets();
-    createDescriptorSetLayout();
-
-    //Include meshes
-    //createUniformBuffers();
-    //createTextureImage();
-    //createTextureImageView();
-    //createTextureSampler();
-    //createVertexBuffer();
-    //createIndexBuffer();
-    //Update layout
-
-    createGraphicsPipeline();
-
-    createCommandBuffers();
     createUniformBuffers();
+    createCommandBuffers();
     createSyncObjects();
+}
+
+std::shared_ptr<ShaderLayout> Renderer::CreateShaderFromSource(
+    std::string_view vertex, std::string_view fragment, std::string_view geometry)
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
+    auto shader = ShFactory->createShader(vertex, fragment, geometry);
+    shaders_.push_back(shader);
+    return shader;
+}
+
+std::shared_ptr<ShaderLayout> Renderer::CreateShaderFromFiles(
+    std::string_view vertexPath, std::string_view fragmentPath,
+    std::string_view geometryPath)
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
+    std::string geometry;
+    if (!geometryPath.empty())
+        geometry = LoadTextFile(geometryPath);
+
+    return CreateShaderFromSource(LoadTextFile(vertexPath),
+                                  LoadTextFile(fragmentPath), geometry);
+}
+
+void Renderer::UseShader(const std::shared_ptr<ShaderLayout>& shader)
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
+    if (!shader)
+        throw std::runtime_error("shader layout is null");
+    if (shader->getStages()->empty())
+        throw std::runtime_error("shader layout has no stages");
+
+    activeShader_ = shader;
+
+    for (auto& mesh : meshes_)
+        mesh->sh_ = std::make_shared<Shader>(activeShader_);
+
+    vkDeviceWaitIdle(device);
+    clearInlcudePart();
+
+    if (descriptorSetLayout != VK_NULL_HANDLE)
+        {
+            vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+            descriptorSetLayout = VK_NULL_HANDLE;
+        }
+    if (graphicsPipeline != VK_NULL_HANDLE)
+        {
+            vkDestroyPipeline(device, graphicsPipeline, nullptr);
+            graphicsPipeline = VK_NULL_HANDLE;
+        }
+    if (pipelineLayout != VK_NULL_HANDLE)
+        {
+            vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+            pipelineLayout = VK_NULL_HANDLE;
+        }
+
+    createDescriptorSetLayout();
+    createGraphicsPipeline();
+    createUniformBuffers();
+    createDescriptorPool();
+    createDescriptorSets();
+    createCommandBuffers();
 }
 
 void Renderer::createGraphicsPipeline()
@@ -161,8 +215,8 @@ void Renderer::createGraphicsPipeline()
     pipelineInfo.pNext = nullptr;
     //pipelineInfo.stageCount = 2;
     //pipelineInfo.pStages = stgs;
-    pipelineInfo.stageCount          = shaders_[0]->getStages()->size();
-    pipelineInfo.pStages             = shaders_[0]->getStages()->data();
+    pipelineInfo.stageCount          = activeShader_->getStages()->size();
+    pipelineInfo.pStages             = activeShader_->getStages()->data();
     pipelineInfo.pVertexInputState   = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState      = &viewportState;
@@ -358,12 +412,21 @@ void Renderer::createDescriptorPool()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
-    std::array<VkDescriptorPoolSize, 1> poolSizes {};
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount =
-        static_cast<uint32_t>(swapChainImages.size()); //3 *
-    //poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    //poolSizes[1].descriptorCount = static_cast<uint32_t>(5 * swapChainImages.size());
+    std::unordered_map<VkDescriptorType, uint32_t> descriptorsPerSet;
+    for (const auto& binding : *activeShader_->getLayoutBindings())
+        descriptorsPerSet[binding.descriptorType] += binding.descriptorCount;
+
+    const uint32_t meshCount =
+        std::max(1u, static_cast<uint32_t>(meshes_.size()));
+    const uint32_t setCount = meshCount * static_cast<uint32_t>(swapChainImages.size());
+
+    std::vector<VkDescriptorPoolSize> poolSizes;
+    poolSizes.reserve(descriptorsPerSet.size());
+    for (const auto& [type, countPerSet] : descriptorsPerSet)
+        {
+            poolSizes.push_back(VkDescriptorPoolSize {
+                type, countPerSet * setCount});
+        }
 
     VkDescriptorPoolCreateInfo poolInfo {};
     poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -371,8 +434,7 @@ void Renderer::createDescriptorPool()
     poolInfo.flags         = 0;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes    = poolSizes.data();
-    poolInfo.maxSets =
-        static_cast<uint32_t>(meshes_.size() * swapChainImages.size());
+    poolInfo.maxSets       = setCount;
 
     if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) !=
         VK_SUCCESS)
@@ -420,8 +482,8 @@ void Renderer::createDescriptorSetLayout()
     VkDescriptorSetLayoutCreateInfo layoutInfo {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.pNext = nullptr;
-    layoutInfo.bindingCount = shaders_[0]->getLayoutBindings()->size();
-    layoutInfo.pBindings = shaders_[0]->getLayoutBindings()->data(); //Layouts;
+    layoutInfo.bindingCount = activeShader_->getLayoutBindings()->size();
+    layoutInfo.pBindings = activeShader_->getLayoutBindings()->data(); //Layouts;
 
     if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,
                                     &descriptorSetLayout) != VK_SUCCESS)
@@ -515,7 +577,7 @@ void Renderer::createDescriptorSets()
             for (size_t i = 0; i < swapChainImages.size(); ++i)
                 {
                     std::vector<VkWriteDescriptorSet> descriptorWrites {};
-                    for (const auto& layout : *shaders_[0]->getLayoutBindings())
+                    for (const auto& layout : *activeShader_->getLayoutBindings())
                         {
                             if (layout.descriptorType ==
                                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
@@ -538,6 +600,10 @@ void Renderer::createDescriptorSets()
                             if (layout.descriptorType ==
                                 VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                                 {
+                                    if (mesh->textures_.empty())
+                                        throw std::runtime_error(
+                                            "mesh has no texture for sampler binding");
+
                                     VkDescriptorImageInfo imageInfo {};
                                     imageInfo.imageLayout =
                                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -667,8 +733,7 @@ std::shared_ptr<Mesh> Renderer::AddMesh(BaseMesh* mesh)
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
     meshes_.push_back(MeshFac->createMesh(std::unique_ptr<BaseMesh>(mesh)));
-    meshes_.back()->sh_ =
-        std::make_shared<Shader>(shaders_[0]); //shaders_[0]->getShader();
+    meshes_.back()->sh_ = std::make_shared<Shader>(activeShader_);
     Update();
     return meshes_.back();
 }

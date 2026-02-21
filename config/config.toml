@@ -3,3 +3,7 @@ filename = "multor.log"
 # 0 - 6
 log_level = 6
 
+[rendering]
+# 0 = no FPS limit
+max_fps = 30
+

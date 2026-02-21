@@ -5,16 +5,22 @@
 #include "configure.h"
 
 #include <filesystem>
+#include <chrono>
+#include <thread>
 
 namespace Multor
 {
 
 Application::Application()
 {
-    if(std::filesystem::exists(CFG_DEFAULT_FILE))
-    {
-        table_ = toml::parse_file(CFG_DEFAULT_FILE);
-    }
+    if (std::filesystem::exists(CFG_DEFAULT_FILE))
+        {
+            table_ = toml::parse_file(CFG_DEFAULT_FILE);
+        }
+    else if (std::filesystem::exists("config/config.toml"))
+        {
+            table_ = toml::parse_file("config/config.toml");
+        }
 
     Logging::LoggerFactory::Init(table_);
 
@@ -56,17 +62,25 @@ bool Application::MainLoop()
     static auto logger{Logging::LoggerFactory::GetLogger(table_["logging"]["filename"].value_or(DEFAULT_LOG_FILE))};
     try
         {
+            using clock = std::chrono::high_resolution_clock;
+            const int maxFps = table_["rendering"]["max_fps"].value_or(30);
+            const auto frameStart = clock::now();
+
             pContr_->dt = static_cast<float>(chron());
             if (!pWindow_->ProcEvents())
                 return false;
             pWindow_->SwapBuffer();
-            //(*_ppScene)->Draw();
-            //*pContr_->View = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-            //*pContr_->Projection = glm::perspective(glm::radians(45.0f), 800 / (float)800, 0.1f, 10.0f);
-            //_pRenderer->UpdatePV(*pContr_->Projection * (*pContr_->View));
             _pRenderer->Draw();
 
-            //gui->Draw();
+            if (maxFps > 0)
+                {
+                    const auto frameTarget =
+                        std::chrono::duration<double>(1.0 / static_cast<double>(maxFps));
+                    const auto frameTime = clock::now() - frameStart;
+                    if (frameTime < frameTarget)
+                        std::this_thread::sleep_for(frameTarget - frameTime);
+                }
+
 
             return true;
         }

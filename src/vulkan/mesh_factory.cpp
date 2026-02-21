@@ -18,10 +18,19 @@ MeshFactory::createMesh(std::unique_ptr<BaseMesh> mesh)
     vk_mesh->indexBuffer_ = createIndexBuffer(mesh->GetVertexes());
     vk_mesh->indexesSize_ = mesh->GetVertexes()->GetIndices().size();
 
-    //Vkmesh->MaterialBuffer = createMaterialBuffer(mesh->GetMaterial());
-    //uint16_t i = 0;
-    //for (auto it = mesh->GetTextures(); it.first != it.second; ++it.first)
-    //	Vkmesh->textures_.emplace_back(CreateTexture(it.first->get()->GetImages()[i].get())),++i;
+    auto [texBegin, texEnd] = mesh->GetTextures();
+    for (auto it = texBegin; it != texEnd; ++it)
+        {
+            if (!(*it))
+                continue;
+
+            auto images = (*it)->GetImages();
+            if (images.empty() || !images[0])
+                continue;
+
+            vk_mesh->textures_.push_back(
+                std::shared_ptr<Texture>(createTexture(images[0].get())));
+        }
     /*
 	Vkmesh->matrixes_ = createBuffer(TransBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
