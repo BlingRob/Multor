@@ -8,6 +8,10 @@ namespace Multor::Vulkan
 void TransformUBO::updateModel(std::size_t      frame,
                                const glm::mat4& newTransformMatrix)
 {
+    if (modelCache_.size() <= frame)
+        modelCache_.resize(frame + 1, glm::mat4(1.0f));
+    modelCache_[frame] = newTransformMatrix;
+
     void* data;
     vkMapMemory(dev_, matrixes_[frame]->bufferMemory_, 0, TransBufObj, 0,
                 &data);
@@ -18,6 +22,9 @@ void TransformUBO::updateModel(std::size_t      frame,
     memcpy(static_cast<char*>(data) + offsetof(UBOs::Transform, normalMatrix_),
            &normalMatrix, sizeof(glm::mat4));
     vkUnmapMemory(dev_, matrixes_[frame]->bufferMemory_);
+
+    if (onModelChanged_)
+        onModelChanged_();
 }
 
 void TransformUBO::updateView(std::size_t frame, const glm::vec3& newPos)
@@ -39,6 +46,11 @@ void TransformUBO::updatePV(std::size_t      frame,
     memcpy(static_cast<char*>(data) + offsetof(UBOs::Transform, PV_),
            &newProjectViewMatrix, sizeof(glm::mat4));
     vkUnmapMemory(dev_, matrixes_[frame]->bufferMemory_);
+}
+
+void TransformUBO::SetModelChangedCallback(std::function<void()> callback)
+{
+    onModelChanged_ = std::move(callback);
 }
 
 } // namespace Multor::Vulkan

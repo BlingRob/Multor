@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <memory>
+#include <functional>
 
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
@@ -38,10 +39,12 @@ struct TransformUBO
     void updateModel(std::size_t frame, const glm::mat4& newTransformMatrix);
     void updateView(std::size_t frame, const glm::vec3& newPosition);
     void updatePV(std::size_t frame, const glm::mat4& newProjectViewMatrix);
+    void SetModelChangedCallback(std::function<void()> callback);
 
     std::vector<std::unique_ptr<Buffer> > matrixes_;
     std::vector<std::unique_ptr<Buffer> > viewPosUBO_;
     std::vector<std::unique_ptr<Buffer> > materialUBO_;
+    std::vector<glm::mat4>                modelCache_;
 
     static const VkDeviceSize MatBufObj   = sizeof(Material);
     static const VkDeviceSize TransBufObj = sizeof(UBOs::Transform);
@@ -49,6 +52,7 @@ struct TransformUBO
 
 private:
     VkDevice dev_;
+    std::function<void()> onModelChanged_;
 };
 
 } // namespace Multor::Vulkan

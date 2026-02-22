@@ -5,8 +5,13 @@
 #include "shader_factory.h"
 #include "frame_chain.h"
 #include "objects/texture.h"
+#include "objects/buffer.h"
 #include "syncer.h"
 #include "structures/light_ubo.h"
+#include "structures/shadow_ubo.h"
+#include "shadow_resources.h"
+#include "shadow_pass.h"
+#include "shadow_renderer.h"
 #include "../utils/files_tools.h"
 #include "../scene_objects/light.h"
 
@@ -33,6 +38,7 @@ public:
     void AddLight(std::shared_ptr<Multor::BLight> light);
     void SetLights(std::vector<std::shared_ptr<Multor::BLight> > lights);
     void ClearLights();
+    void InvalidateShadows();
     const std::vector<std::shared_ptr<Multor::BLight> >& GetLights() const;
     std::shared_ptr<ShaderLayout>
     CreateShaderFromSource(std::string_view vertex, std::string_view fragment,
@@ -53,6 +59,7 @@ public:
 
 private:
     void createGraphicsPipeline();
+    void createShadowPipeline();
     void createCommandBuffers();
     void createDescriptorSetLayout();
     void createDescriptorPool();
@@ -65,6 +72,10 @@ private:
     void clearIncludePart();
 
     void updateMats(uint32_t currentImage);
+    void markShadowsDirty();
+    void drawShadows();
+    void drawDirectionalShadows();
+    void drawPointShadows();
 
 private:
     const int maxFramesInFlight_ = 3;
@@ -76,6 +87,7 @@ private:
     std::unique_ptr<ShaderFactory>              shFactory_;
     std::vector<std::shared_ptr<ShaderLayout> > shaders_;
     std::shared_ptr<ShaderLayout>               activeShader_;
+    std::shared_ptr<ShaderLayout>               shadowDirectionalShader_;
 
     VkPipelineLayout      pipelineLayout_      = VK_NULL_HANDLE;
     VkPipeline            graphicsPipeline_    = VK_NULL_HANDLE;
@@ -83,11 +95,22 @@ private:
     VkDescriptorPool      descriptorPool_      = VK_NULL_HANDLE;
 
     std::vector<VkCommandBuffer> commandBuffers_;
+    std::vector<VkCommandBuffer> shadowCommandBuffersInFlight_;
     std::vector<Syncer>          syncers_;
+    VkFence shadowMapsInFlightFence_ = VK_NULL_HANDLE;
+    bool shadowMapsDirty_ = true;
 
     std::list<std::shared_ptr<Mesh> > meshes_;
     std::vector<std::shared_ptr<Multor::BLight> > lights_;
     std::unique_ptr<LightsUBO> lightsUbo_;
+    std::vector<std::unique_ptr<Buffer> > directionalShadowUboBuffers_;
+    std::vector<std::unique_ptr<Buffer> > pointShadowUboBuffers_;
+    std::unique_ptr<ShadowResources> shadowResources_;
+    std::unique_ptr<ShadowPass> shadowPass_;
+    std::unique_ptr<ShadowRenderer> shadowRenderer_;
+    ShadowMapArray directionalShadowMaps_;
+    ShadowMapArray pointShadowMaps_;
+    UBOs::ShadowPack shadowPackCache_ {};
 };
 
 } // namespace Multor::Vulkan

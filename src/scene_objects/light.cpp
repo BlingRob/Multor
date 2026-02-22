@@ -31,7 +31,9 @@ BLight::BLight(BLight&& other) noexcept
       specular_(other.specular_),
       attenuation_(other.attenuation_),
       lightVec_(other.lightVec_),
-      slotId_(other.slotId_)
+      slotId_(other.slotId_),
+      onChanged_(std::move(other.onChanged_)),
+      shadow_(std::move(other.shadow_))
 {
     other.slotId_ = -1;
 }
@@ -49,6 +51,8 @@ BLight& BLight::operator=(BLight&& other) noexcept
     attenuation_ = other.attenuation_;
     lightVec_    = other.lightVec_;
     slotId_      = other.slotId_;
+    onChanged_   = std::move(other.onChanged_);
+    shadow_      = std::move(other.shadow_);
 
     other.slotId_ = -1;
     return *this;
@@ -79,24 +83,38 @@ glm::vec3 BLight::GetAttenuation() const
     return attenuation_;
 }
 
+const Shadow* BLight::GetShadow() const
+{
+    return shadow_.get();
+}
+
 void BLight::SetAmbient(const glm::vec3& ambient)
 {
     ambient_ = ambient;
+    NotifyChanged();
 }
 
 void BLight::SetDiffuse(const glm::vec3& diffuse)
 {
     diffuse_ = diffuse;
+    NotifyChanged();
 }
 
 void BLight::SetSpecular(const glm::vec3& specular)
 {
     specular_ = specular;
+    NotifyChanged();
 }
 
 void BLight::SetAttenuation(const glm::vec3& attenuation)
 {
     attenuation_ = attenuation;
+    NotifyChanged();
+}
+
+void BLight::SetChangedCallback(std::function<void()> callback)
+{
+    onChanged_ = std::move(callback);
 }
 
 int32_t BLight::GetLightSlot() const
@@ -112,11 +130,18 @@ bool BLight::HasLightSlot() const
 void BLight::SetVec(const glm::vec4& vec)
 {
     lightVec_ = vec;
+    NotifyChanged();
 }
 
 glm::vec4 BLight::GetVec() const
 {
     return lightVec_;
+}
+
+void BLight::NotifyChanged()
+{
+    if (onChanged_)
+        onChanged_();
 }
 
 void BLight::AcquireSlot()
@@ -146,6 +171,7 @@ DirectionalLight::DirectionalLight(const glm::vec3& ambient,
                                    const glm::vec3& direction)
     : BLight(ambient, diffuse, specular, attenuation, glm::vec4(direction, 0.0f))
 {
+    shadow_ = std::make_shared<DirectionalShadow>();
 }
 
 void DirectionalLight::ChangeDirection(const glm::vec3& direction)
@@ -169,6 +195,7 @@ PointLight::PointLight(const glm::vec3& ambient, const glm::vec3& diffuse,
                        const glm::vec3& position)
     : BLight(ambient, diffuse, specular, attenuation, glm::vec4(position, 1.0f))
 {
+    shadow_ = std::make_shared<PointShadow>();
 }
 
 void PointLight::SetPos(const glm::vec3& position)
@@ -195,6 +222,7 @@ SpotLight::SpotLight(const glm::vec3& ambient, const glm::vec3& diffuse,
       alpha_(smallAngle),
       position_(position)
 {
+    shadow_ = std::make_shared<SpotShadow>(theta_);
 }
 
 std::pair<float, float> SpotLight::GetAngles() const
@@ -206,11 +234,15 @@ void SpotLight::SetAngles(const std::pair<float, float>& newAngles)
 {
     theta_ = newAngles.first;
     alpha_ = newAngles.second;
+    if (auto* spotShadow = dynamic_cast<SpotShadow*>(shadow_.get()))
+        spotShadow->SetPerspective(theta_);
+    NotifyChanged();
 }
 
 void SpotLight::SetPos(const glm::vec3& position)
 {
     position_ = position;
+    NotifyChanged();
 }
 
 glm::vec3 SpotLight::GetPos() const

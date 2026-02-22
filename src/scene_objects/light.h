@@ -5,11 +5,14 @@
 #define LIGHT_H
 
 #include "../entity.h"
+#include "shadow.h"
 
 #include <glm/glm.hpp>
 
 #include <cstdint>
+#include <functional>
 #include <list>
+#include <memory>
 #include <utility>
 
 namespace Multor
@@ -42,11 +45,13 @@ public:
     glm::vec3 GetDiffuse() const;
     glm::vec3 GetSpecular() const;
     glm::vec3 GetAttenuation() const;
+    const Shadow* GetShadow() const;
 
     void SetAmbient(const glm::vec3& ambient);
     void SetDiffuse(const glm::vec3& diffuse);
     void SetSpecular(const glm::vec3& specular);
     void SetAttenuation(const glm::vec3& attenuation);
+    void SetChangedCallback(std::function<void()> callback);
 
     int32_t GetLightSlot() const;
     bool    HasLightSlot() const;
@@ -54,6 +59,7 @@ public:
 protected:
     void      SetVec(const glm::vec4& vec);
     glm::vec4 GetVec() const;
+    void      NotifyChanged();
 
 private:
     void AcquireSlot();
@@ -67,9 +73,12 @@ private:
     glm::vec4 lightVec_;
 
     int32_t slotId_ = -1;
+    std::function<void()> onChanged_;
 
     static inline std::list<int32_t> lightSlots_ = {0, 1, 2, 3, 4, 5, 6, 7,
                                                     8, 9, 10, 11, 12, 13, 14};
+protected:
+    std::shared_ptr<Shadow> shadow_;
 };
 
 class DirectionalLight : public BLight

@@ -33,6 +33,7 @@ public:
     std::shared_ptr<Vulkan::Renderer> GetRenderer();
     void AddLight(std::shared_ptr<BLight> light);
     void ClearLights();
+    void InvalidateShadows();
     //void SetScen(std::unique_ptr<Scene>);
     //Scene* GetScen() const;
 

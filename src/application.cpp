@@ -75,6 +75,13 @@ void Application::ClearLights()
     SyncLightsToRenderer();
 }
 
+void Application::InvalidateShadows()
+{
+    if (!pRenderer_)
+        throw std::runtime_error("renderer is not initialized");
+    pRenderer_->InvalidateShadows();
+}
+
 void Application::SyncLightsToRenderer()
 {
     if (!pRenderer_)

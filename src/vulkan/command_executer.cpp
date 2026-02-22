@@ -30,6 +30,15 @@ void CommandExecuter::TransitionImageLayout(VkImage image, VkFormat format,
                                             VkImageLayout oldLayout,
                                             VkImageLayout newLayout)
 {
+    TransitionImageLayoutLayers(image, format, oldLayout, newLayout, 0, 1);
+}
+
+void CommandExecuter::TransitionImageLayoutLayers(VkImage image, VkFormat format,
+                                                  VkImageLayout oldLayout,
+                                                  VkImageLayout newLayout,
+                                                  uint32_t baseArrayLayer,
+                                                  uint32_t layerCount)
+{
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
     VkImageMemoryBarrier barrier {};
@@ -41,8 +50,8 @@ void CommandExecuter::TransitionImageLayout(VkImage image, VkFormat format,
     barrier.image               = image;
     barrier.subresourceRange.baseMipLevel   = 0;
     barrier.subresourceRange.levelCount     = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount     = 1;
+    barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
+    barrier.subresourceRange.layerCount     = layerCount;
     barrier.srcAccessMask                   = 0; // TODO
     barrier.dstAccessMask                   = 0; // TODO
 
@@ -84,6 +93,48 @@ void CommandExecuter::TransitionImageLayout(VkImage image, VkFormat format,
                 }
 
             sourceStage      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        }
+    else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+             newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (hasStencilComponent(format))
+                barrier.subresourceRange.aspectMask |=
+                    VK_IMAGE_ASPECT_STENCIL_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+    else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
+             newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        {
+            barrier.srcAccessMask =
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (hasStencilComponent(format))
+                barrier.subresourceRange.aspectMask |=
+                    VK_IMAGE_ASPECT_STENCIL_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+    else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
+             newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        {
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.dstAccessMask =
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (hasStencilComponent(format))
+                barrier.subresourceRange.aspectMask |=
+                    VK_IMAGE_ASPECT_STENCIL_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         }
     else
@@ -141,15 +192,32 @@ VkCommandBuffer CommandExecuter::beginSingleTimeCommands()
 
 void CommandExecuter::endSingleTimeCommands(VkCommandBuffer commandBuffer)
 {
-    vkEndCommandBuffer(commandBuffer);
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+        throw std::runtime_error("failed to end single time command buffer");
 
     VkSubmitInfo submitInfo {};
     submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers    = &commandBuffer;
 
-    vkQueueSubmit(graphQueue_, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(graphQueue_);
+    VkFenceCreateInfo fenceInfo {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+    VkFence fence = VK_NULL_HANDLE;
+    if (vkCreateFence(dev_, &fenceInfo, nullptr, &fence) != VK_SUCCESS)
+        throw std::runtime_error("failed to create single time submit fence");
+
+    if (vkQueueSubmit(graphQueue_, 1, &submitInfo, fence) != VK_SUCCESS)
+        {
+            vkDestroyFence(dev_, fence, nullptr);
+            throw std::runtime_error("failed to submit single time command buffer");
+        }
+    if (vkWaitForFences(dev_, 1, &fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+        {
+            vkDestroyFence(dev_, fence, nullptr);
+            throw std::runtime_error("failed to wait for single time command fence");
+        }
+    vkDestroyFence(dev_, fence, nullptr);
 
     vkFreeCommandBuffers(dev_, pool_, 1, &commandBuffer);
 }

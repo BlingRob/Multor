@@ -65,8 +65,7 @@ void ShaderLayout::addPipShStInfo(VkShaderModule        modul,
 
     ShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ShaderStageInfo.pNext = nullptr;
-    ShaderStageInfo.flags =
-        VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT_EXT;
+    ShaderStageInfo.flags = 0;
     ShaderStageInfo.stage               = stage;
     ShaderStageInfo.module              = modul;
     ShaderStageInfo.pName               = entryPointName;

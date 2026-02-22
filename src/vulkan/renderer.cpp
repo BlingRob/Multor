@@ -3,6 +3,8 @@
 #include "renderer.h"
 
 #include <chrono>
+#include <cstring>
+#include <functional>
 #include <unordered_map>
 
 namespace Multor::Vulkan
@@ -15,16 +17,39 @@ Renderer::Renderer(std::shared_ptr<Window> pWnd)
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
     
     shFactory_   = std::make_unique<ShaderFactory>(device);
+    shadowResources_ = std::make_unique<ShadowResources>(device, physicDev);
+    directionalShadowMaps_ =
+        shadowResources_->CreateDirectionalShadowArray();
+    pointShadowMaps_ = shadowResources_->CreatePointShadowCubeArray();
+    shadowPass_ =
+        std::make_unique<ShadowPass>(device, directionalShadowMaps_.format_);
+    shadowRenderer_ =
+        std::make_unique<ShadowRenderer>(device, commandPool, graphicsQueue, executer_);
+    shadowPass_->BuildFramebuffers(*shadowResources_, directionalShadowMaps_,
+                                   pointShadowMaps_);
+    executer_->TransitionImageLayoutLayers(
+        directionalShadowMaps_.image_, directionalShadowMaps_.format_,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0,
+        directionalShadowMaps_.layers_);
+    executer_->TransitionImageLayoutLayers(
+        pointShadowMaps_.image_, pointShadowMaps_.format_,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0,
+        pointShadowMaps_.layers_);
     activeShader_ =
         CreateShaderFromFiles("../../shaders/Base.vs", "../../shaders/Base.frag");
+    shadowDirectionalShader_ = CreateShaderFromFiles(
+        "../../shaders/ShadowDirectional.vs",
+        "../../shaders/ShadowDirectional.frag");
 
     createDescriptorSetLayout();
+    createShadowPipeline();
     createGraphicsPipeline();
     createDescriptorPool();
     createDescriptorSets();
     createUniformBuffers();
     createCommandBuffers();
     createSyncObjects();
+    shadowCommandBuffersInFlight_.assign(maxFramesInFlight_, VK_NULL_HANDLE);
 }
 
 void Renderer::AddLight(std::shared_ptr<Multor::BLight> light)
@@ -34,19 +59,44 @@ void Renderer::AddLight(std::shared_ptr<Multor::BLight> light)
     if (!light)
         throw std::runtime_error("light is null");
 
+    light->SetChangedCallback(std::bind(&Renderer::markShadowsDirty, this));
     lights_.push_back(std::move(light));
+    markShadowsDirty();
 }
 
 void Renderer::SetLights(std::vector<std::shared_ptr<Multor::BLight> > lights)
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    for (auto& light : lights_)
+        {
+            if (light)
+                light->SetChangedCallback({});
+        }
+    for (auto& light : lights)
+        {
+            if (light)
+                light->SetChangedCallback(std::bind(&Renderer::markShadowsDirty, this));
+        }
     lights_ = std::move(lights);
+    markShadowsDirty();
 }
 
 void Renderer::ClearLights()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    for (auto& light : lights_)
+        {
+            if (light)
+                light->SetChangedCallback({});
+        }
     lights_.clear();
+    markShadowsDirty();
+}
+
+void Renderer::InvalidateShadows()
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    markShadowsDirty();
 }
 
 const std::vector<std::shared_ptr<Multor::BLight> >& Renderer::GetLights() const
@@ -110,8 +160,8 @@ void Renderer::UseShader(const std::shared_ptr<ShaderLayout>& shader)
             vkDestroyPipelineLayout(device, pipelineLayout_, nullptr);
             pipelineLayout_ = VK_NULL_HANDLE;
         }
-
     createDescriptorSetLayout();
+    createShadowPipeline();
     createGraphicsPipeline();
     createUniformBuffers();
     createDescriptorPool();
@@ -264,6 +314,15 @@ void Renderer::createGraphicsPipeline()
         throw std::runtime_error("failed to create graphics pipeline!");
 }
 
+void Renderer::createShadowPipeline()
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    if (!shadowRenderer_ || !shadowPass_)
+        throw std::runtime_error("shadow renderer/pass is not initialized");
+    shadowRenderer_->RecreateDirectionalPipeline(shadowDirectionalShader_,
+                                                 shadowPass_->GetRenderPass());
+}
+
 void Renderer::createCommandBuffers()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
@@ -363,6 +422,14 @@ void Renderer::Draw()
     //barrier to wait for showing past frame
     vkWaitForFences(device, 1, &syncers_[currentFrame_].inFlightFences_, VK_FALSE,
                     UINT64_MAX);
+    if (currentFrame_ < shadowCommandBuffersInFlight_.size() &&
+        shadowCommandBuffersInFlight_[currentFrame_] != VK_NULL_HANDLE &&
+        shadowRenderer_)
+        {
+            shadowRenderer_->FreeCommandBuffer(
+                shadowCommandBuffersInFlight_[currentFrame_]);
+            shadowCommandBuffersInFlight_[currentFrame_] = VK_NULL_HANDLE;
+        }
     //Get next ingex image for redering
     VkResult result =
         vkAcquireNextImageKHR(device, swapChain_, UINT64_MAX,
@@ -377,13 +444,27 @@ void Renderer::Draw()
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         throw std::runtime_error("failed to acquire swap chain image!");
 
-    //updateUniformBuffer(imageIndex);
     updateMats(imageIndex_);
+    if (shadowMapsDirty_ && shadowMapsInFlightFence_ != VK_NULL_HANDLE &&
+        shadowMapsInFlightFence_ != syncers_[currentFrame_].inFlightFences_)
+        {
+            vkWaitForFences(device, 1, &shadowMapsInFlightFence_, VK_TRUE,
+                            UINT64_MAX);
+        }
+    VkCommandBuffer shadowCmd = VK_NULL_HANDLE;
+    if (shadowMapsDirty_ && shadowRenderer_ && shadowPass_)
+        {
+            shadowCmd = shadowRenderer_->BuildShadowCommandBufferAll(
+                meshes_, *shadowPass_, directionalShadowMaps_, pointShadowMaps_,
+                shadowPackCache_, imageIndex_);
+            if (currentFrame_ < shadowCommandBuffersInFlight_.size())
+                shadowCommandBuffersInFlight_[currentFrame_] = shadowCmd;
+        }
 
     if (syncers_[imageIndex_].imagesInFlight_ != VK_NULL_HANDLE)
         vkWaitForFences(device, 1, &syncers_[imageIndex_].imagesInFlight_, VK_TRUE,
                         UINT64_MAX);
-    syncers_[imageIndex_].imagesInFlight_ = syncers_[imageIndex_].inFlightFences_;
+    syncers_[imageIndex_].imagesInFlight_ = syncers_[currentFrame_].inFlightFences_;
 
     VkSubmitInfo submitInfo {};
     submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -394,8 +475,12 @@ void Renderer::Draw()
     submitInfo.pWaitSemaphores =
         &syncers_[currentFrame_].imageAvailableSemaphores_;
     submitInfo.pWaitDstStageMask    = waitStages;
-    submitInfo.commandBufferCount   = 1;
-    submitInfo.pCommandBuffers      = &commandBuffers_[imageIndex_];
+    VkCommandBuffer submitCmds[2]   = {shadowCmd, commandBuffers_[imageIndex_]};
+    submitInfo.commandBufferCount   =
+        (shadowCmd == VK_NULL_HANDLE) ? 1u : 2u;
+    submitInfo.pCommandBuffers =
+        (shadowCmd == VK_NULL_HANDLE) ? &commandBuffers_[imageIndex_]
+                                      : submitCmds;
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores =
         &syncers_[currentFrame_].renderFinishedSemaphores_;
@@ -405,6 +490,11 @@ void Renderer::Draw()
     if (vkQueueSubmit(graphicsQueue, 1, &submitInfo,
                       syncers_[currentFrame_].inFlightFences_) != VK_SUCCESS)
         throw std::runtime_error("failed to submit draw command buffer!");
+    if (shadowCmd != VK_NULL_HANDLE)
+        {
+            shadowMapsInFlightFence_ = syncers_[currentFrame_].inFlightFences_;
+            shadowMapsDirty_         = false;
+        }
 
     VkPresentInfoKHR presentInfo {};
     presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -424,6 +514,30 @@ void Renderer::Draw()
         throw std::runtime_error("failed to present swap chain image!");
 
     currentFrame_ = (currentFrame_ + 1) % maxFramesInFlight_;
+}
+
+void Renderer::drawDirectionalShadows()
+{
+    if (!shadowRenderer_ || !shadowPass_)
+        return;
+    shadowRenderer_->DrawDirectional(meshes_, *shadowPass_, directionalShadowMaps_,
+                                     shadowPackCache_, imageIndex_);
+}
+
+void Renderer::drawPointShadows()
+{
+    if (!shadowRenderer_ || !shadowPass_)
+        return;
+    shadowRenderer_->DrawPoint(meshes_, *shadowPass_, pointShadowMaps_,
+                               shadowPackCache_, imageIndex_);
+}
+
+void Renderer::drawShadows()
+{
+    if (!shadowRenderer_ || !shadowPass_)
+        return;
+    shadowRenderer_->DrawAll(meshes_, *shadowPass_, directionalShadowMaps_,
+                             pointShadowMaps_, shadowPackCache_, imageIndex_);
 }
 
 void Renderer::createSyncObjects()
@@ -528,9 +642,26 @@ void Renderer::createUniformBuffers()
         lightsUbo_->buffers_.push_back(
             meshFactory_->CreateUniformBuffer(LightsUBO::LightsBufObj));
 
+    directionalShadowUboBuffers_.clear();
+    directionalShadowUboBuffers_.reserve(swapChainImages_.size());
+    for (size_t i = 0; i < swapChainImages_.size(); ++i)
+        directionalShadowUboBuffers_.push_back(meshFactory_->CreateUniformBuffer(
+            sizeof(UBOs::DirectionalShadows)));
+
+    pointShadowUboBuffers_.clear();
+    pointShadowUboBuffers_.reserve(swapChainImages_.size());
+    for (size_t i = 0; i < swapChainImages_.size(); ++i)
+        pointShadowUboBuffers_.push_back(meshFactory_->CreateUniformBuffer(
+            sizeof(UBOs::PointShadows)));
+
     for (auto& mesh : meshes_)
         {
             mesh->tr_ = meshFactory_->CreateUBOBuffers(swapChainImages_.size());
+            if (mesh->tr_)
+                {
+                    mesh->tr_->SetModelChangedCallback(
+                        std::bind(&Renderer::markShadowsDirty, this));
+                }
             /*
 		for (size_t i = 0; i < swapChainImages.size(); ++i)
 		{
@@ -579,6 +710,35 @@ void Renderer::updateMats(uint32_t currentImage)
                 if (light)
                     lightPtrs.push_back(light.get());
             lightsUbo_->update(currentImage, PackLights(lightPtrs));
+            shadowPackCache_ = UBOs::PackShadowData(lightPtrs);
+            if (currentImage < directionalShadowUboBuffers_.size() &&
+                directionalShadowUboBuffers_[currentImage])
+                {
+                    void* data = nullptr;
+                    vkMapMemory(device,
+                                directionalShadowUboBuffers_[currentImage]
+                                    ->bufferMemory_,
+                                0, sizeof(UBOs::DirectionalShadows), 0, &data);
+                    std::memcpy(data, &shadowPackCache_.directional_,
+                                sizeof(UBOs::DirectionalShadows));
+                    vkUnmapMemory(device,
+                                  directionalShadowUboBuffers_[currentImage]
+                                      ->bufferMemory_);
+                }
+            if (currentImage < pointShadowUboBuffers_.size() &&
+                pointShadowUboBuffers_[currentImage])
+                {
+                    void* data = nullptr;
+                    vkMapMemory(device,
+                                pointShadowUboBuffers_[currentImage]
+                                    ->bufferMemory_,
+                                0, sizeof(UBOs::PointShadows), 0, &data);
+                    std::memcpy(data, &shadowPackCache_.point_,
+                                sizeof(UBOs::PointShadows));
+                    vkUnmapMemory(device,
+                                  pointShadowUboBuffers_[currentImage]
+                                      ->bufferMemory_);
+                }
         }
 
     for (auto& mesh : meshes_)
@@ -650,6 +810,24 @@ void Renderer::createDescriptorSets()
                                             bufferInfo.range =
                                                 sizeof(UBOs::ViewPosition);
                                         }
+                                    else if (layout.binding == 4 &&
+                                             i < directionalShadowUboBuffers_.size())
+                                        {
+                                            bufferInfo.buffer =
+                                                directionalShadowUboBuffers_[i]
+                                                    ->buffer_;
+                                            bufferInfo.range =
+                                                sizeof(UBOs::DirectionalShadows);
+                                        }
+                                    else if (layout.binding == 6 &&
+                                             i < pointShadowUboBuffers_.size())
+                                        {
+                                            bufferInfo.buffer =
+                                                pointShadowUboBuffers_[i]
+                                                    ->buffer_;
+                                            bufferInfo.range =
+                                                sizeof(UBOs::PointShadows);
+                                        }
                                     else
                                         {
                                             throw std::runtime_error(
@@ -668,17 +846,42 @@ void Renderer::createDescriptorSets()
                             if (layout.descriptorType ==
                                 VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                                 {
-                                    if (mesh->textures_.empty())
-                                        throw std::runtime_error(
-                                            "mesh has no texture for sampler binding");
-
                                     VkDescriptorImageInfo imageInfo {};
-                                    imageInfo.imageLayout =
-                                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                                    imageInfo.imageView =
-                                        (*mesh->textures_.begin())->view_;
-                                    imageInfo.sampler =
-                                        (*mesh->textures_.begin())->sampler_;
+                                    if (layout.binding == 3)
+                                        {
+                                            if (mesh->textures_.empty())
+                                                throw std::runtime_error(
+                                                    "mesh has no texture for sampler binding");
+                                            imageInfo.imageLayout =
+                                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                                            imageInfo.imageView =
+                                                (*mesh->textures_.begin())->view_;
+                                            imageInfo.sampler =
+                                                (*mesh->textures_.begin())->sampler_;
+                                        }
+                                    else if (layout.binding == 5)
+                                        {
+                                            imageInfo.imageLayout =
+                                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                                            imageInfo.imageView =
+                                                directionalShadowMaps_.view_;
+                                            imageInfo.sampler =
+                                                directionalShadowMaps_.sampler_;
+                                        }
+                                    else if (layout.binding == 7)
+                                        {
+                                            imageInfo.imageLayout =
+                                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                                            imageInfo.imageView =
+                                                pointShadowMaps_.view_;
+                                            imageInfo.sampler =
+                                                pointShadowMaps_.sampler_;
+                                        }
+                                    else
+                                        {
+                                            throw std::runtime_error(
+                                                "unsupported sampler binding");
+                                        }
                                     descriptorWrites.push_back(
                                         {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                          nullptr, mesh->sh_->desSet_[i],
@@ -802,8 +1005,14 @@ std::shared_ptr<Mesh> Renderer::AddMesh(BaseMesh* mesh)
 
     meshes_.push_back(meshFactory_->CreateMesh(std::unique_ptr<BaseMesh>(mesh)));
     meshes_.back()->sh_ = std::make_shared<Shader>(activeShader_);
+    markShadowsDirty();
     Update();
     return meshes_.back();
+}
+
+void Renderer::markShadowsDirty()
+{
+    shadowMapsDirty_ = true;
 }
 
 void Renderer::clearIncludePart()
@@ -823,9 +1032,23 @@ void Renderer::clearIncludePart()
 			mesh->materialUBO_.clear();
 			mesh->viewPosUBO_.clear();
 			mesh->matrixes.clear();
-		}*/
+        }*/
         }
     lightsUbo_.reset();
+    directionalShadowUboBuffers_.clear();
+    pointShadowUboBuffers_.clear();
+    if (shadowRenderer_)
+        {
+            for (auto& cmd : shadowCommandBuffersInFlight_)
+                {
+                    if (cmd != VK_NULL_HANDLE)
+                        shadowRenderer_->FreeCommandBuffer(cmd);
+                    cmd = VK_NULL_HANDLE;
+                }
+        }
+    shadowCommandBuffersInFlight_.assign(maxFramesInFlight_, VK_NULL_HANDLE);
+    shadowMapsInFlightFence_ = VK_NULL_HANDLE;
+    shadowMapsDirty_ = true;
 
     vkFreeCommandBuffers(device, commandPool,
                          static_cast<uint32_t>(commandBuffers_.size()),
@@ -841,6 +1064,12 @@ Renderer::~Renderer()
 
     vkDeviceWaitIdle(device);
 
+    for (auto& light : lights_)
+        {
+            if (light)
+                light->SetChangedCallback({});
+        }
+
     syncers_.clear();
 
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout_, nullptr);
@@ -848,6 +1077,11 @@ Renderer::~Renderer()
     clearIncludePart();
     vkDestroyPipeline(device, graphicsPipeline_, nullptr);
     graphicsPipeline_ = VK_NULL_HANDLE;
+    shadowRenderer_.reset();
+    shadowPass_.reset();
+    shadowResources_.reset();
+    pointShadowMaps_ = {};
+    directionalShadowMaps_ = {};
     shFactory_.reset();
     vkDestroyPipelineLayout(device, pipelineLayout_, nullptr);
     pipelineLayout_ = VK_NULL_HANDLE;

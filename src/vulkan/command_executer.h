@@ -22,6 +22,11 @@ public:
     void TransitionImageLayout(VkImage image, VkFormat format,
                                VkImageLayout oldLayout,
                                VkImageLayout newLayout);
+    void TransitionImageLayoutLayers(VkImage image, VkFormat format,
+                                     VkImageLayout oldLayout,
+                                     VkImageLayout newLayout,
+                                     uint32_t baseArrayLayer,
+                                     uint32_t layerCount);
     void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
                            uint32_t height);
 
