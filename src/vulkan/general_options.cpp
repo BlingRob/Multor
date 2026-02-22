@@ -194,8 +194,12 @@ void BaseStructs::InitLogicalDevice()
             queueCreateInfos.push_back(queueCreateInfo);
         }
 
+    VkPhysicalDeviceFeatures supportedFeatures {};
+    vkGetPhysicalDeviceFeatures(physicDev, &supportedFeatures);
+
     VkPhysicalDeviceFeatures devFeatures {};
-    devFeatures.samplerAnisotropy = VK_TRUE;
+    devFeatures.samplerAnisotropy = supportedFeatures.samplerAnisotropy;
+    devFeatures.imageCubeArray    = supportedFeatures.imageCubeArray;
 
     VkDeviceCreateInfo createInfo {};
     createInfo.sType             = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

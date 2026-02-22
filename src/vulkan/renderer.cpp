@@ -781,6 +781,13 @@ void Renderer::createDescriptorSets()
             for (size_t i = 0; i < swapChainImages_.size(); ++i)
                 {
                     std::vector<VkWriteDescriptorSet> descriptorWrites {};
+                    std::vector<VkDescriptorBufferInfo> descriptorBufferInfos {};
+                    std::vector<VkDescriptorImageInfo> descriptorImageInfos {};
+                    const auto bindingCount =
+                        activeShader_->GetLayoutBindings()->size();
+                    descriptorWrites.reserve(bindingCount);
+                    descriptorBufferInfos.reserve(bindingCount);
+                    descriptorImageInfos.reserve(bindingCount);
                     for (const auto& layout : *activeShader_->GetLayoutBindings())
                         {
                             if (layout.descriptorType ==
@@ -834,13 +841,16 @@ void Renderer::createDescriptorSets()
                                                 "unsupported uniform buffer binding");
                                         }
                                     bufferInfo.offset = 0;
+                                    descriptorBufferInfos.push_back(bufferInfo);
 
                                     descriptorWrites.push_back(
                                         {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                          nullptr, mesh->sh_->desSet_[i],
                                          layout.binding, 0, 1,
                                          VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                                         nullptr, &bufferInfo, nullptr});
+                                         nullptr,
+                                         &descriptorBufferInfos.back(),
+                                         nullptr});
                                 }
 
                             if (layout.descriptorType ==
@@ -882,12 +892,14 @@ void Renderer::createDescriptorSets()
                                             throw std::runtime_error(
                                                 "unsupported sampler binding");
                                         }
+                                    descriptorImageInfos.push_back(imageInfo);
                                     descriptorWrites.push_back(
                                         {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                          nullptr, mesh->sh_->desSet_[i],
                                          layout.binding, 0, 1,
                                          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                                         &imageInfo, nullptr, nullptr});
+                                         &descriptorImageInfos.back(),
+                                         nullptr, nullptr});
                                 }
                         }
                     /*
