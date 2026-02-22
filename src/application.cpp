@@ -32,6 +32,7 @@ Application::Application()
         {
             pContr_    = std::make_shared<PositionController>();
             pLights_   = std::make_shared<LightManager>();
+            pScene_    = std::make_shared<Scene>(pContr_);
             pWindow_   = std::make_shared<Window>(&signals_, pContr_);
             pRenderer_ = std::make_shared<Vulkan::Renderer>(pWindow_);
             SyncLightsToRenderer();
@@ -59,11 +60,37 @@ std::shared_ptr<Vulkan::Renderer> Application::GetRenderer()
     return pRenderer_;
 }
 
+std::shared_ptr<Scene> Application::GetScene()
+{
+    return pScene_;
+}
+
+void Application::SetScene(std::shared_ptr<Scene> scene)
+{
+    pScene_ = std::move(scene);
+    if (pScene_ && !pScene_->GetController())
+        pScene_->SetController(pContr_);
+    if (pLights_)
+        {
+            pLights_->Clear();
+            if (pScene_)
+                {
+                    auto lights = pScene_->GetLights();
+                    for (auto it = lights.first; it != lights.second; ++it)
+                        if (it->second)
+                            pLights_->Add(it->second);
+                }
+        }
+    SyncSceneToRenderer();
+}
+
 void Application::AddLight(std::shared_ptr<BLight> light)
 {
     if (!pLights_)
         throw std::runtime_error("light manager is not initialized");
     pLights_->Add(std::move(light));
+    if (pScene_)
+        pScene_->AddLight(pLights_->GetAll().back());
     SyncLightsToRenderer();
 }
 
@@ -72,6 +99,8 @@ void Application::ClearLights()
     if (!pLights_)
         throw std::runtime_error("light manager is not initialized");
     pLights_->Clear();
+    if (pScene_)
+        pScene_->ClearLights();
     SyncLightsToRenderer();
 }
 
@@ -91,6 +120,87 @@ void Application::SyncLightsToRenderer()
     pRenderer_->SetLights(pLights_->GetAll());
 }
 
+void Application::SyncSceneToRenderer()
+{
+    if (!pRenderer_)
+        throw std::runtime_error("renderer is not initialized");
+
+    sceneMeshBindings_.clear();
+
+    if (!pScene_)
+        return;
+
+    if (pScene_->GetController() == nullptr)
+        pScene_->SetController(pContr_);
+
+    pRenderer_->ClearMeshes();
+    pRenderer_->ClearLights();
+    auto lights = pScene_->GetLights();
+    for (auto it = lights.first; it != lights.second; ++it)
+        if (it->second)
+            pRenderer_->AddLight(it->second);
+
+    std::vector<std::shared_ptr<Node> > sceneNodesForMeshes;
+    std::vector<std::unique_ptr<BaseMesh> > meshClones;
+
+    auto models = pScene_->GetModels();
+    std::function<void(const std::shared_ptr<Node>&)> collectNodeBindings;
+    collectNodeBindings = [this, &collectNodeBindings, &sceneNodesForMeshes,
+                           &meshClones](const std::shared_ptr<Node>& node)
+    {
+        if (!node)
+            return;
+
+        auto meshes = node->GetMeshes();
+        for (auto mit = meshes.first; mit != meshes.second; ++mit)
+            {
+                if (!(*mit))
+                    continue;
+                auto clone = (*mit)->Clone();
+                if (!clone)
+                    continue;
+                sceneNodesForMeshes.push_back(node);
+                meshClones.push_back(std::move(clone));
+            }
+
+        auto children = node->GetChildren();
+        for (auto cit = children.first; cit != children.second; ++cit)
+            collectNodeBindings(*cit);
+    };
+
+    for (auto it = models.first; it != models.second; ++it)
+        {
+            if (!it->second || !it->second->GetRoot())
+                continue;
+            collectNodeBindings(it->second->GetRoot());
+        }
+
+    auto vkMeshes = pRenderer_->AddMeshes(std::move(meshClones));
+    const std::size_t bindCount =
+        std::min(sceneNodesForMeshes.size(), vkMeshes.size());
+    sceneMeshBindings_.reserve(bindCount);
+    for (std::size_t i = 0; i < bindCount; ++i)
+        {
+            if (sceneNodesForMeshes[i] && vkMeshes[i])
+                sceneMeshBindings_.push_back({sceneNodesForMeshes[i], vkMeshes[i]});
+        }
+}
+
+void Application::UpdateSceneBindings()
+{
+    if (!pRenderer_)
+        return;
+
+    const std::size_t frame = pRenderer_->GetCurFrame();
+    for (auto& binding : sceneMeshBindings_)
+        {
+            auto node = binding.node_.lock();
+            if (!node || !binding.vkMesh_ || !binding.vkMesh_->tr_)
+                continue;
+            binding.vkMesh_->tr_->updateModel(frame, node->GetTransform());
+        }
+}
+
 bool Application::MainLoop()
 {
     static auto logger{Logging::LoggerFactory::GetLogger(table_["logging"]["filename"].value_or(DEFAULT_LOG_FILE))};
@@ -104,6 +214,7 @@ bool Application::MainLoop()
             if (!pWindow_->ProcEvents())
                 return false;
             pWindow_->SwapBuffer();
+            UpdateSceneBindings();
             pRenderer_->Draw();
 
             if (maxFps > 0)
@@ -133,6 +244,20 @@ bool Application::MainLoop()
 double Application::GetTime()
 {
     return chron_.GetTime();
+}
+
+bool Application::LoadSceneFromFile(std::string_view path)
+{
+    SceneLoader loader;
+    if (!loader.LoadScene(path))
+        return false;
+
+    auto scene = loader.GetScene(pContr_);
+    if (!scene)
+        return false;
+
+    SetScene(std::move(scene));
+    return true;
 }
 
 } // namespace Multor

@@ -31,6 +31,7 @@ public:
     std::size_t GetSize();
 
     std::vector<std::uint32_t>& GetIndices();
+    std::unique_ptr<Vertexes>    Clone() const;
 
     Vertex* GetVertexes();
 

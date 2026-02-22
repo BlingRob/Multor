@@ -7,6 +7,8 @@
 #include "vulkan/renderer.h"
 
 #include "gui/window.h"
+#include "loaders/scene_loader.h"
+#include "scene.h"
 #include "scene_objects/light_manager.h"
 #include "transformation.h"
 #include "utils/time.h"
@@ -16,6 +18,7 @@
 #include <array>
 #include <functional>
 #include <string>
+#include <vector>
 
 #include <toml.hpp>
 
@@ -31,6 +34,9 @@ public:
     bool                            MainLoop();
     double                          GetTime();
     std::shared_ptr<Vulkan::Renderer> GetRenderer();
+    std::shared_ptr<Scene> GetScene();
+    void SetScene(std::shared_ptr<Scene> scene);
+    bool LoadSceneFromFile(std::string_view path);
     void AddLight(std::shared_ptr<BLight> light);
     void ClearLights();
     void InvalidateShadows();
@@ -48,6 +54,7 @@ private:
     //Vulkan
     std::shared_ptr<Vulkan::Renderer> pRenderer_;
     //Scene
+    std::shared_ptr<Scene> pScene_;
     std::shared_ptr<LightManager> pLights_;
     //std::shared_ptr<std::unique_ptr<Scene>> _ppScene;
     //Time
@@ -61,7 +68,16 @@ private:
     //SignalsTable
     std::array<std::function<void(void*)>, 5> signals_;
 
+    struct SceneMeshBinding
+    {
+        std::weak_ptr<Node> node_;
+        std::shared_ptr<Vulkan::Mesh> vkMesh_;
+    };
+    std::vector<SceneMeshBinding> sceneMeshBindings_;
+
     void SyncLightsToRenderer();
+    void SyncSceneToRenderer();
+    void UpdateSceneBindings();
 };
 
 } // namespace Multor

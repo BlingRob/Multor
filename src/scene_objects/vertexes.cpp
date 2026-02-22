@@ -73,6 +73,15 @@ std::vector<std::uint32_t>& Vertexes::GetIndices()
     return indices_;
 }
 
+std::unique_ptr<Vertexes> Vertexes::Clone() const
+{
+    auto out = std::make_unique<Vertexes>();
+    out->size_   = size_;
+    out->verts_  = verts_;
+    out->indices_ = indices_;
+    return out;
+}
+
 void Vertexes::AddIndices(std::vector<std::uint32_t>&& inds)
 {
     indices_ = std::forward<std::vector<std::uint32_t> >(inds);

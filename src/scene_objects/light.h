@@ -26,7 +26,7 @@ enum class LightType
     Spot
 };
 
-class BLight
+class BLight : public Entity
 {
 public:
     BLight(const glm::vec3& ambient, const glm::vec3& diffuse,

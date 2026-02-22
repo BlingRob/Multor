@@ -1010,6 +1010,43 @@ std::shared_ptr<Mesh> Renderer::AddMesh(BaseMesh* mesh)
     return meshes_.back();
 }
 
+std::vector<std::shared_ptr<Mesh> >
+Renderer::AddMeshes(std::vector<std::unique_ptr<BaseMesh> > meshes)
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
+    std::vector<std::shared_ptr<Mesh> > result;
+    result.reserve(meshes.size());
+
+    bool addedAny = false;
+    for (auto& mesh : meshes)
+        {
+            if (!mesh)
+                continue;
+            meshes_.push_back(meshFactory_->CreateMesh(std::move(mesh)));
+            meshes_.back()->sh_ = std::make_shared<Shader>(activeShader_);
+            result.push_back(meshes_.back());
+            addedAny = true;
+        }
+
+    if (addedAny)
+        {
+            markShadowsDirty();
+            Update();
+        }
+
+    return result;
+}
+
+void Renderer::ClearMeshes()
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
+    meshes_.clear();
+    markShadowsDirty();
+    Update();
+}
+
 void Renderer::markShadowsDirty()
 {
     shadowMapsDirty_ = true;

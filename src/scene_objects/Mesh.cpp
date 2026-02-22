@@ -45,4 +45,21 @@ void BaseMesh::AddTexture(std::shared_ptr<BaseTexture> tex)
     textures_.emplace_back(std::move(tex));
 }
 
+std::unique_ptr<BaseMesh> BaseMesh::Clone() const
+{
+    std::unique_ptr<Vertexes> vertsClone =
+        vertices_ ? vertices_->Clone() : std::make_unique<Vertexes>();
+    std::unique_ptr<Material> matClone =
+        material_ ? std::make_unique<Material>(*material_)
+                  : std::make_unique<Material>();
+
+    std::vector<std::shared_ptr<BaseTexture> > texClones = textures_;
+
+    auto out = std::make_unique<BaseMesh>(std::move(vertsClone),
+                                          std::move(matClone),
+                                          std::move(texClones));
+    out->SetName(GetName());
+    return out;
+}
+
 } // namespace Multor

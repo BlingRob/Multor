@@ -35,6 +35,9 @@ public:
     ~Renderer();
 
     std::shared_ptr<Mesh> AddMesh(BaseMesh* mesh);
+    std::vector<std::shared_ptr<Mesh> >
+    AddMeshes(std::vector<std::unique_ptr<BaseMesh> > meshes);
+    void ClearMeshes();
     void AddLight(std::shared_ptr<Multor::BLight> light);
     void SetLights(std::vector<std::shared_ptr<Multor::BLight> > lights);
     void ClearLights();
