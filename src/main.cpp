@@ -112,6 +112,17 @@ int main(int argc, char* args[])
             if (argc > 1 && args && args[1] != nullptr)
                 loadedScene = app.LoadSceneFromFile(std::string_view(args[1]));
 
+            // Force a stable debug camera for scene-import testing.
+            if (auto scene = app.GetScene())
+                {
+                    if (auto controller = scene->GetController())
+                        {
+                            controller->cam_ = std::make_shared<Camera>(
+                                glm::vec3(6.0f, 4.0f, 10.0f));
+                            controller->UpdateViewMatrix();
+                        }
+                }
+
             std::shared_ptr<Vulkan::Mesh> m1;
             std::shared_ptr<Vulkan::Mesh> m2;
             std::shared_ptr<Vulkan::Mesh> ground;
