@@ -97,7 +97,7 @@ int main(int argc, char* args[])
                         std::string("Ground"), std::string("core"),
                         Texture_Types::Diffuse,
                         std::vector<std::shared_ptr<Image> >(
-                            {ImageLoader::LoadTexture("./Res/matrix.jpg")}));
+                            {ImageLoader::LoadTexture("./Res/wall.jpg")}));
 
                 auto* ground = new BaseMesh(
                     std::make_unique<Vertexes>(4, &planePos[0],

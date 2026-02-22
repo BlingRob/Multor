@@ -43,6 +43,10 @@ public:
     void SetLights(std::vector<std::shared_ptr<Multor::BLight> > lights);
     void ClearLights();
     void InvalidateShadows();
+    void SetLightingEnabled(bool enabled);
+    bool IsLightingEnabled() const;
+    void SetShadowsEnabled(bool enabled);
+    bool IsShadowsEnabled() const;
     const std::vector<std::shared_ptr<Multor::BLight> >& GetLights() const;
     std::shared_ptr<ShaderLayout>
     CreateShaderFromSource(std::string_view vertex, std::string_view fragment,
@@ -114,6 +118,8 @@ private:
     std::vector<Syncer>          syncers_;
     VkFence shadowMapsInFlightFence_ = VK_NULL_HANDLE;
     bool shadowMapsDirty_ = true;
+    bool lightingEnabled_ = true;
+    bool shadowsEnabled_ = true;
 
     std::list<std::shared_ptr<Mesh> > meshes_;
     std::vector<std::shared_ptr<Multor::BLight> > lights_;

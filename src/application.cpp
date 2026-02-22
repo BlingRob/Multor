@@ -38,6 +38,10 @@ Application::Application()
             pGui_      = std::make_unique<ImGuiOverlay>();
             pGui_->AttachWindow(pWindow_.get());
             pGui_->AttachRenderer(pRenderer_);
+            pGui_->SetOpenSceneCallback([this](const std::string& path)
+            {
+                return this->LoadSceneFromFile(path);
+            });
             LOG_INFO(logger.get(), "GUI overlay status: {}", pGui_->BackendStatus());
             pWindow_->SetEventInterceptor([this](const SDL_Event& e)
             {

@@ -99,6 +99,32 @@ void Renderer::InvalidateShadows()
     markShadowsDirty();
 }
 
+void Renderer::SetLightingEnabled(bool enabled)
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    lightingEnabled_ = enabled;
+}
+
+bool Renderer::IsLightingEnabled() const
+{
+    return lightingEnabled_;
+}
+
+void Renderer::SetShadowsEnabled(bool enabled)
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    if (shadowsEnabled_ == enabled)
+        return;
+    shadowsEnabled_ = enabled;
+    if (enabled)
+        markShadowsDirty();
+}
+
+bool Renderer::IsShadowsEnabled() const
+{
+    return shadowsEnabled_;
+}
+
 const std::vector<std::shared_ptr<Multor::BLight> >& Renderer::GetLights() const
 {
     return lights_;
@@ -450,14 +476,14 @@ void Renderer::Draw()
         throw std::runtime_error("failed to acquire swap chain image!");
 
     updateMats(imageIndex_);
-    if (shadowMapsDirty_ && shadowMapsInFlightFence_ != VK_NULL_HANDLE &&
+    if (shadowsEnabled_ && shadowMapsDirty_ && shadowMapsInFlightFence_ != VK_NULL_HANDLE &&
         shadowMapsInFlightFence_ != syncers_[currentFrame_].inFlightFences_)
         {
             vkWaitForFences(device, 1, &shadowMapsInFlightFence_, VK_TRUE,
                             UINT64_MAX);
         }
     VkCommandBuffer shadowCmd = VK_NULL_HANDLE;
-    if (shadowMapsDirty_ && shadowRenderer_ && shadowPass_)
+    if (shadowsEnabled_ && shadowMapsDirty_ && shadowRenderer_ && shadowPass_)
         {
             shadowCmd = shadowRenderer_->BuildShadowCommandBufferAll(
                 meshes_, *shadowPass_, directionalShadowMaps_, pointShadowMaps_,
@@ -715,8 +741,11 @@ void Renderer::updateMats(uint32_t currentImage)
             for (const auto& light : lights_)
                 if (light)
                     lightPtrs.push_back(light.get());
-            lightsUbo_->update(currentImage, PackLights(lightPtrs));
-            shadowPackCache_ = UBOs::PackShadowData(lightPtrs);
+            lightsUbo_->update(currentImage,
+                               lightingEnabled_ ? PackLights(lightPtrs)
+                                                : UBOs::Lights {});
+            shadowPackCache_ = shadowsEnabled_ ? UBOs::PackShadowData(lightPtrs)
+                                               : UBOs::ShadowPack {};
             if (currentImage < directionalShadowUboBuffers_.size() &&
                 directionalShadowUboBuffers_[currentImage])
                 {

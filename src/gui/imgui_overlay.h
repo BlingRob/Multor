@@ -13,6 +13,8 @@
 #include <memory>
 #include <string>
 #include <chrono>
+#include <functional>
+#include <array>
 
 namespace Multor
 {
@@ -34,6 +36,7 @@ public:
 
     void AttachWindow(const Window* window);
     void AttachRenderer(const std::shared_ptr<Vulkan::Renderer>& renderer);
+    void SetOpenSceneCallback(std::function<bool(const std::string&)> callback);
     void OnSdlEvent(const SDL_Event& e);
 
     void NewFrame();
@@ -57,6 +60,15 @@ private:
     void* drawData_ = nullptr;
     std::chrono::steady_clock::time_point lastFrameTime_ {};
     VkDescriptorPool imguiDescriptorPool_ = VK_NULL_HANDLE;
+    bool showAxisGizmo_ = true;
+    bool showStatsWindow_ = true;
+    bool showCameraWindow_ = true;
+    bool showLightsWindow_ = true;
+    bool showDebugWindow_ = true;
+    bool showOpenSceneWindow_ = false;
+    std::function<bool(const std::string&)> openSceneCallback_;
+    std::array<char, 512> openScenePath_ {};
+    std::string openSceneStatus_;
 };
 
 } // namespace Multor
