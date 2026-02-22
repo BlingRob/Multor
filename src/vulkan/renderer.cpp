@@ -27,6 +27,33 @@ Renderer::Renderer(std::shared_ptr<Window> pWnd)
     createSyncObjects();
 }
 
+void Renderer::AddLight(std::shared_ptr<Multor::BLight> light)
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+
+    if (!light)
+        throw std::runtime_error("light is null");
+
+    lights_.push_back(std::move(light));
+}
+
+void Renderer::SetLights(std::vector<std::shared_ptr<Multor::BLight> > lights)
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    lights_ = std::move(lights);
+}
+
+void Renderer::ClearLights()
+{
+    LOG_TRACE_L1(logger_.get(), __FUNCTION__);
+    lights_.clear();
+}
+
+const std::vector<std::shared_ptr<Multor::BLight> >& Renderer::GetLights() const
+{
+    return lights_;
+}
+
 std::shared_ptr<ShaderLayout> Renderer::CreateShaderFromSource(
     std::string_view vertex, std::string_view fragment, std::string_view geometry)
 {
@@ -494,6 +521,13 @@ void Renderer::createUniformBuffers()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
+    lightsUbo_ = std::make_unique<LightsUBO>(device);
+    lightsUbo_->buffers_.clear();
+    lightsUbo_->buffers_.reserve(swapChainImages_.size());
+    for (size_t i = 0; i < swapChainImages_.size(); ++i)
+        lightsUbo_->buffers_.push_back(
+            meshFactory_->CreateUniformBuffer(LightsUBO::LightsBufObj));
+
     for (auto& mesh : meshes_)
         {
             mesh->tr_ = meshFactory_->CreateUBOBuffers(swapChainImages_.size());
@@ -533,11 +567,24 @@ void Renderer::updateMats(uint32_t currentImage)
         throw std::runtime_error(
             "Renderer::updateMats requires valid PositionController matrices");
     ubo.PV_           = (*controller->projection_) * (*controller->view_);
-    ubo.normalMatrix_ = glm::mat3(glm::transpose(glm::inverse(ubo.model_)));
+    ubo.normalMatrix_ = glm::transpose(glm::inverse(ubo.model_));
+    const glm::vec3 viewPos = controller->cam_ ? controller->cam_->position_
+                                               : glm::vec3(0.0f);
+
+    if (lightsUbo_)
+        {
+            std::vector<const Multor::BLight*> lightPtrs;
+            lightPtrs.reserve(lights_.size());
+            for (const auto& light : lights_)
+                if (light)
+                    lightPtrs.push_back(light.get());
+            lightsUbo_->update(currentImage, PackLights(lightPtrs));
+        }
 
     for (auto& mesh : meshes_)
         {
             mesh->tr_->updatePV(currentImage, ubo.PV_);
+            mesh->tr_->updateView(currentImage, viewPos);
             //mesh->tr_->updateModel(currentImage, glm::mat4(1.0f));
         }
 }
@@ -580,11 +627,35 @@ void Renderer::createDescriptorSets()
                                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                                 {
                                     VkDescriptorBufferInfo bufferInfo {};
-                                    bufferInfo.buffer =
-                                        mesh->tr_->matrixes_[i]
-                                            ->buffer_; // TransformUBO[i]->buffer_;
+                                    if (layout.binding == 0)
+                                        {
+                                            bufferInfo.buffer =
+                                                mesh->tr_->matrixes_[i]->buffer_;
+                                            bufferInfo.range =
+                                                sizeof(UBOs::Transform);
+                                        }
+                                    else if (layout.binding == 1 && lightsUbo_ &&
+                                             i < lightsUbo_->buffers_.size())
+                                        {
+                                            bufferInfo.buffer =
+                                                lightsUbo_->buffers_[i]->buffer_;
+                                            bufferInfo.range =
+                                                LightsUBO::LightsBufObj;
+                                        }
+                                    else if (layout.binding == 2 &&
+                                             i < mesh->tr_->viewPosUBO_.size())
+                                        {
+                                            bufferInfo.buffer =
+                                                mesh->tr_->viewPosUBO_[i]->buffer_;
+                                            bufferInfo.range =
+                                                sizeof(UBOs::ViewPosition);
+                                        }
+                                    else
+                                        {
+                                            throw std::runtime_error(
+                                                "unsupported uniform buffer binding");
+                                        }
                                     bufferInfo.offset = 0;
-                                    bufferInfo.range  = sizeof(UBOs::Transform);
 
                                     descriptorWrites.push_back(
                                         {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -754,6 +825,7 @@ void Renderer::clearIncludePart()
 			mesh->matrixes.clear();
 		}*/
         }
+    lightsUbo_.reset();
 
     vkFreeCommandBuffers(device, commandPool,
                          static_cast<uint32_t>(commandBuffers_.size()),

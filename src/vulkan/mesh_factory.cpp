@@ -56,6 +56,10 @@ MeshFactory::CreateUBOBuffers(std::size_t nFrames)
                 ubo->TransBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+            ubo->viewPosUBO_.push_back(CreateBuffer(
+                ubo->ViewBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
             /*
 		mesh->materialUBO_.push_back(MeshFac->createBuffer(MatBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -66,6 +70,7 @@ MeshFactory::CreateUBOBuffers(std::size_t nFrames)
 			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));*/
             ubo->updateModel(i, glm::mat4(1.0f));
             ubo->updatePV(i, glm::mat4(1.0f));
+            ubo->updateView(i, glm::vec3(0.0f));
         }
 
     return ubo;

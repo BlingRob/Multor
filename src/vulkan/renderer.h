@@ -6,7 +6,9 @@
 #include "frame_chain.h"
 #include "objects/texture.h"
 #include "syncer.h"
+#include "structures/light_ubo.h"
 #include "../utils/files_tools.h"
+#include "../scene_objects/light.h"
 
 #include <vector>
 #include <set>
@@ -28,6 +30,10 @@ public:
     ~Renderer();
 
     std::shared_ptr<Mesh> AddMesh(BaseMesh* mesh);
+    void AddLight(std::shared_ptr<Multor::BLight> light);
+    void SetLights(std::vector<std::shared_ptr<Multor::BLight> > lights);
+    void ClearLights();
+    const std::vector<std::shared_ptr<Multor::BLight> >& GetLights() const;
     std::shared_ptr<ShaderLayout>
     CreateShaderFromSource(std::string_view vertex, std::string_view fragment,
                            std::string_view geometry = "");
@@ -80,6 +86,8 @@ private:
     std::vector<Syncer>          syncers_;
 
     std::list<std::shared_ptr<Mesh> > meshes_;
+    std::vector<std::shared_ptr<Multor::BLight> > lights_;
+    std::unique_ptr<LightsUBO> lightsUbo_;
 };
 
 } // namespace Multor::Vulkan

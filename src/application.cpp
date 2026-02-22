@@ -31,8 +31,10 @@ Application::Application()
     try
         {
             pContr_    = std::make_shared<PositionController>();
+            pLights_   = std::make_shared<LightManager>();
             pWindow_   = std::make_shared<Window>(&signals_, pContr_);
             pRenderer_ = std::make_shared<Vulkan::Renderer>(pWindow_);
+            SyncLightsToRenderer();
 
             signals_[0] = std::bind(&Vulkan::Renderer::Update, pRenderer_);
 
@@ -55,6 +57,31 @@ Application::~Application(){}
 std::shared_ptr<Vulkan::Renderer> Application::GetRenderer()
 {
     return pRenderer_;
+}
+
+void Application::AddLight(std::shared_ptr<BLight> light)
+{
+    if (!pLights_)
+        throw std::runtime_error("light manager is not initialized");
+    pLights_->Add(std::move(light));
+    SyncLightsToRenderer();
+}
+
+void Application::ClearLights()
+{
+    if (!pLights_)
+        throw std::runtime_error("light manager is not initialized");
+    pLights_->Clear();
+    SyncLightsToRenderer();
+}
+
+void Application::SyncLightsToRenderer()
+{
+    if (!pRenderer_)
+        throw std::runtime_error("renderer is not initialized");
+    if (!pLights_)
+        throw std::runtime_error("light manager is not initialized");
+    pRenderer_->SetLights(pLights_->GetAll());
 }
 
 bool Application::MainLoop()

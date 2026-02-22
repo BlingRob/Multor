@@ -18,14 +18,14 @@ namespace UBOs
 {
 struct Transform
 {
-    glm::mat4 model_;
-    glm::mat4 PV_;
-    glm::mat3 normalMatrix_;
+    alignas(16) glm::mat4 model_ {};
+    alignas(16) glm::mat4 PV_ {};
+    alignas(16) glm::mat4 normalMatrix_ {};
 };
 
 struct ViewPosition
 {
-    glm::vec3 viewPos_;
+    alignas(16) glm::vec4 viewPos_ {};
 };
 }
 

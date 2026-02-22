@@ -21,7 +21,7 @@ layout(set = 0,binding = 0) uniform Transform
 {
 	mat4 model;
 	mat4 PV;
-	mat3 NormalMatrix;
+	mat4 NormalMatrix;
 } transform;
 
 layout(location = 0) out VS_OUT vs_out;
@@ -29,7 +29,7 @@ layout(location = 0) out VS_OUT vs_out;
 void main()
 {
     vs_out.FragPos = vec3(transform.model * vec4(position, 1.0));
-    vs_out.Normal = normalize(transform.NormalMatrix * vertexNormal);
+    vs_out.Normal = normalize((transform.NormalMatrix * vec4(vertexNormal, 0.0)).xyz);
     vs_out.TexCoords = texCoord;
     gl_Position = transform.PV * transform.model * vec4(position, 1.0);
 }

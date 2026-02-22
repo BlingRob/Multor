@@ -7,6 +7,7 @@
 #include "vulkan/renderer.h"
 
 #include "gui/window.h"
+#include "scene_objects/light_manager.h"
 #include "transformation.h"
 #include "utils/time.h"
 #include "logger/logger.h"
@@ -30,6 +31,8 @@ public:
     bool                            MainLoop();
     double                          GetTime();
     std::shared_ptr<Vulkan::Renderer> GetRenderer();
+    void AddLight(std::shared_ptr<BLight> light);
+    void ClearLights();
     //void SetScen(std::unique_ptr<Scene>);
     //Scene* GetScen() const;
 
@@ -44,6 +47,7 @@ private:
     //Vulkan
     std::shared_ptr<Vulkan::Renderer> pRenderer_;
     //Scene
+    std::shared_ptr<LightManager> pLights_;
     //std::shared_ptr<std::unique_ptr<Scene>> _ppScene;
     //Time
     Chronometr chron_;
@@ -55,6 +59,8 @@ private:
 
     //SignalsTable
     std::array<std::function<void(void*)>, 5> signals_;
+
+    void SyncLightsToRenderer();
 };
 
 } // namespace Multor

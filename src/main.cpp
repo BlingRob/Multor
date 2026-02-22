@@ -67,6 +67,10 @@ int main(int argc, char* args[])
                                            nullptr, &cubeTexCoords[0]),
                 nullptr, std::vector<std::shared_ptr<BaseTexture> >({tex}));
             Application             app;
+            app.AddLight(std::make_shared<DirectionalLight>(
+                glm::vec3(0.15f, 0.15f, 0.15f), glm::vec3(0.9f, 0.9f, 0.9f),
+                glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(1.0f, 0.0f, 0.0f),
+                glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f))));
             std::shared_ptr<Vulkan::Mesh> m1 = app.GetRenderer()->AddMesh(TestMesh);
             std::shared_ptr<Vulkan::Mesh> m2 = app.GetRenderer()->AddMesh(TestMesh2);
             static auto startTime = std::chrono::high_resolution_clock::now();
