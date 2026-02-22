@@ -27,9 +27,9 @@ struct Matrices
     //void SendToShader(const Shader& shader);
 };
 
-struct Position_Controller : public Matrices
+struct PositionController : public Matrices
 {
-    Position_Controller()
+    PositionController()
     {
         dt_  = 0.0f;
         cam_ = std::make_shared<Camera>(glm::vec3(10.0f, 10.0f, 10.0f));

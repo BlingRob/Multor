@@ -16,7 +16,7 @@ MeshFactory::CreateMesh(std::unique_ptr<BaseMesh> mesh)
 
     vk_mesh->vertBuffer_  = CreateVertexBuffer(mesh->GetVertexes());
     vk_mesh->indexBuffer_ = CreateIndexBuffer(mesh->GetVertexes());
-    vk_mesh->indexesSize_ = mesh->GetVertexes()->GetIndices().size();
+    vk_mesh->indexesSize_ = static_cast<std::uint32_t>(mesh->GetVertexes()->GetIndices().size());
 
     auto [texBegin, texEnd] = mesh->GetTextures();
     for (auto it = texBegin; it != texEnd; ++it)

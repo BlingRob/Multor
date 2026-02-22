@@ -22,7 +22,7 @@ class Window
 {
 public:
     Window(std::array<std::function<void(void*)>, 5>* sigs,
-           std::shared_ptr<Position_Controller>       contr);
+           std::shared_ptr<PositionController>       contr);
 
     std::shared_ptr<SDL_Window> GetWindow()
     {
@@ -32,8 +32,12 @@ public:
     bool                        ProcEvents();
     void                        SwapBuffer();
     SDL_Window*                 GetWindow() const;
+    std::shared_ptr<PositionController> GetController() const
+    {
+        return pContr_;
+    }
     std::pair<int32_t, int32_t> MaxSize() const;
-    //Window(std::shared_ptr<Position_Controller>);
+    //Window(std::shared_ptr<PositionController>);
 
     //Size of window
     uint32_t scrWidth_ = 800, scrHeight_ = 800;
@@ -60,7 +64,7 @@ private:
     inline void changeMatrices();
 
     //Data for connect with render engine
-    std::shared_ptr<Position_Controller> pContr_;
+    std::shared_ptr<PositionController> pContr_;
 };
 
 } // namespace Multor

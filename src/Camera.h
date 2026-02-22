@@ -8,7 +8,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
-#include <math.h>
+#include <cmath>
 
 namespace Multor
 {
@@ -30,7 +30,9 @@ public:
         FORWARD,
         BACKWARD,
         LEFT,
-        RIGHT
+        RIGHT,
+        UP,
+        DOWN
     };
 
     /// \brief Camera attributes
@@ -68,7 +70,7 @@ public:
         updateCameraVectors();
     }
 
-    inline glm::mat4 GetViewMatrix()
+    inline glm::mat4 GetViewMatrix() const
     {
         return glm::lookAt(position_, position_ + front_, up_);
     }
@@ -90,6 +92,12 @@ public:
                     break;
                 case Camera_Movement::RIGHT:
                     position_ += right_ * velocity;
+                    break;
+                case Camera_Movement::UP:
+                    position_ += worldUp_ * velocity;
+                    break;
+                case Camera_Movement::DOWN:
+                    position_ -= worldUp_ * velocity;
                     break;
             }
     }
@@ -116,12 +124,8 @@ public:
     // Process mouse scroll
     void ProcessMouseScroll(float yoffset)
     {
-        if (zoom_ >= zoomLowLimit_ && zoom_ <= zoomHighLimit_)
-            zoom_ -= yoffset;
-        else if (zoom_ <= zoomLowLimit_)
-            zoom_ = zoomLowLimit_;
-        else if (zoom_ >= zoomHighLimit_)
-            zoom_ = zoomHighLimit_;
+        zoom_ -= yoffset;
+        zoom_ = glm::clamp(zoom_, zoomLowLimit_, zoomHighLimit_);
     }
 
 private:
@@ -134,8 +138,8 @@ private:
         front_.z = sin(yaw_) * cos(pitch_);
         front_   = glm::normalize(front_);
         // Reculculation right and up vectors
-        right_ = glm::cross(front_, worldUp_);
-        up_    = glm::cross(right_, front_);
+        right_ = glm::normalize(glm::cross(front_, worldUp_));
+        up_    = glm::normalize(glm::cross(right_, front_));
     }
 };
 

@@ -38,7 +38,7 @@ private:
     toml::table table_;
 
     /// @brief Controller
-    std::shared_ptr<Position_Controller> pContr_;
+    std::shared_ptr<PositionController> pContr_;
     //Pointer of window class
     std::shared_ptr<Window> pWindow_;
     //Vulkan

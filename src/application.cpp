@@ -30,7 +30,7 @@ Application::Application()
 
     try
         {
-            pContr_    = std::make_shared<Position_Controller>();
+            pContr_    = std::make_shared<PositionController>();
             pWindow_   = std::make_shared<Window>(&signals_, pContr_);
             pRenderer_ = std::make_shared<Vulkan::Renderer>(pWindow_);
 

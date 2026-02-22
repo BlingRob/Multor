@@ -19,7 +19,7 @@ bool Window::InitVulkanContext()
 }
 
 Window::Window(std::array<std::function<void(void*)>, 5>* sigs,
-               std::shared_ptr<Position_Controller>       contr)
+               std::shared_ptr<PositionController>       contr)
 {
     pContr_    = contr;
     pSigTable_ = sigs;
@@ -45,6 +45,10 @@ Window::Window(std::array<std::function<void(void*)>, 5>* sigs,
     if (!pWindow_)
         throw std::runtime_error(std::string("Failed to create window!") +
                                  SDL_GetError());
+
+    changedView_ = true;
+    changedProj_ = true;
+    changeMatrices();
 }
 
 Window::~Window()
@@ -85,11 +89,11 @@ bool Window::ProcEvents()
                         case SDL_MOUSEMOTION: {
                             if (clicked_)
                                 {
-                                    float xoffset = e.button.x - lastX_;
-                                    float yoffset = lastY_ - e.button.y;
+                                    float xoffset = static_cast<float>(e.motion.x) - lastX_;
+                                    float yoffset = lastY_ - static_cast<float>(e.motion.y);
 
-                                    lastX_ = static_cast<float>(e.button.x);
-                                    lastY_ = static_cast<float>(e.button.y);
+                                    lastX_ = static_cast<float>(e.motion.x);
+                                    lastY_ = static_cast<float>(e.motion.y);
 
                                     pContr_->cam_->ProcessMouseMovement(xoffset,
                                                                        yoffset);
@@ -100,9 +104,11 @@ bool Window::ProcEvents()
                         }
                         case SDL_MOUSEWHEEL: {
                             if (clicked_)
-                                pContr_->cam_->ProcessMouseScroll(
-                                    static_cast<float>(e.wheel.y));
-                            changedProj_ = true;
+                                {
+                                    pContr_->cam_->ProcessMouseScroll(
+                                        static_cast<float>(e.wheel.y));
+                                    changedProj_ = true;
+                                }
                             break;
                         }
 
@@ -148,20 +154,47 @@ bool Window::ProcEvents()
 
 void Window::doMovement()
 {
+    bool moved = false;
     // Camera controls
     if (keys_[SDL_SCANCODE_W])
-        pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::FORWARD,
-                                       pContr_->dt_);
+        {
+            pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::FORWARD,
+                                           pContr_->dt_);
+            moved = true;
+        }
     if (keys_[SDL_SCANCODE_S])
-        pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::BACKWARD,
-                                       pContr_->dt_);
+        {
+            pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::BACKWARD,
+                                           pContr_->dt_);
+            moved = true;
+        }
     if (keys_[SDL_SCANCODE_A])
-        pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::LEFT,
-                                       pContr_->dt_);
+        {
+            pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::LEFT,
+                                           pContr_->dt_);
+            moved = true;
+        }
     if (keys_[SDL_SCANCODE_D])
-        pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::RIGHT,
-                                       pContr_->dt_);
-    changedView_ = true;
+        {
+            pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::RIGHT,
+                                           pContr_->dt_);
+            moved = true;
+        }
+    if (keys_[SDL_SCANCODE_SPACE])
+        {
+            pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::UP,
+                                           pContr_->dt_);
+            moved = true;
+        }
+    if (keys_[SDL_SCANCODE_LSHIFT])
+        {
+            pContr_->cam_->ProcessKeyboard(Camera::Camera_Movement::DOWN,
+                                           pContr_->dt_);
+            moved = true;
+        }
+
+    if (moved)
+        changedView_ = true;
 }
 
 void Window::changeMatrices()
@@ -171,6 +204,7 @@ void Window::changeMatrices()
             *pContr_->projection_ = glm::perspective(
                 glm::radians(pContr_->cam_->zoom_),
                 (float)scrWidth_ / (float)scrHeight_, 0.1f, 150.0f);
+            (*pContr_->projection_)[1][1] *= -1.0f;
             changedProj_ = false;
         }
     if (changedView_)

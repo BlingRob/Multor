@@ -525,17 +525,23 @@ void Renderer::updateMats(uint32_t currentImage)
                      currentTime - startTime)
                      .count();
 
-    glm::mat4 proj = glm::perspective(
-        glm::radians(45.0f),
-        swapChainExtent_.width / (float)swapChainExtent_.height, 0.1f, 10.0f);
-    proj[1][1] *= -1;
-
     UBOs::Transform ubo {};
     ubo.model_        = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f),
                                     glm::vec3(0.0f, 1.0f, 0.0f));
-    ubo.PV_           = proj * glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
-                                           glm::vec3(0.0f, 0.0f, 0.0f),
-                                           glm::vec3(0.0f, 0.0f, 1.0f));
+    auto controller = _pWnd ? _pWnd->GetController() : nullptr;
+    if (controller && controller->projection_ && controller->view_)
+        ubo.PV_ = (*controller->projection_) * (*controller->view_);
+    else
+        {
+            glm::mat4 proj = glm::perspective(
+                glm::radians(45.0f),
+                swapChainExtent_.width / (float)swapChainExtent_.height, 0.1f,
+                10.0f);
+            proj[1][1] *= -1;
+            ubo.PV_ = proj * glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
+                                         glm::vec3(0.0f, 0.0f, 0.0f),
+                                         glm::vec3(0.0f, 0.0f, 1.0f));
+        }
     ubo.normalMatrix_ = glm::mat3(glm::transpose(glm::inverse(ubo.model_)));
 
     for (auto& mesh : meshes_)

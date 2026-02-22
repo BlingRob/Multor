@@ -57,7 +57,7 @@ void Transformation::updateNormal()
     normalMatrix_ = glm::mat3(glm::transpose(glm::inverse(model_)));
 }
 
-/*void Position_Controller::SendToShader(const Shader& shader)
+/*void PositionController::SendToShader(const Shader& shader)
 {
 	Matrices::SendToShader(shader);
 	shader.setVec("viewPos", cam->Position);
