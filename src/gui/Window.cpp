@@ -201,15 +201,13 @@ void Window::changeMatrices()
 {
     if (changedProj_)
         {
-            *pContr_->projection_ = glm::perspective(
-                glm::radians(pContr_->cam_->zoom_),
-                (float)scrWidth_ / (float)scrHeight_, 0.1f, 150.0f);
-            (*pContr_->projection_)[1][1] *= -1.0f;
+            pContr_->UpdateProjectionMatrix(static_cast<float>(scrWidth_),
+                                            static_cast<float>(scrHeight_));
             changedProj_ = false;
         }
     if (changedView_)
         {
-            *pContr_->view_ = pContr_->cam_->GetViewMatrix();
+            pContr_->UpdateViewMatrix();
             changedView_   = false;
         }
 }

@@ -35,6 +35,17 @@ struct PositionController : public Matrices
         cam_ = std::make_shared<Camera>(glm::vec3(10.0f, 10.0f, 10.0f));
     }
 
+    void UpdateViewMatrix()
+    {
+        *view_ = cam_->GetViewMatrix();
+    }
+
+    void UpdateProjectionMatrix(float width, float height)
+    {
+        const float aspect = (height > 0.0f) ? (width / height) : 1.0f;
+        *projection_       = cam_->GetProjectionMatrix(aspect);
+    }
+
     //void SendToShader(const Shader& shader);
 
     std::shared_ptr<Camera> cam_;

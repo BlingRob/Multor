@@ -75,6 +75,17 @@ public:
         return glm::lookAt(position_, position_ + front_, up_);
     }
 
+    inline glm::mat4 GetProjectionMatrix(float aspect, float nearPlane = 0.1f,
+                                         float farPlane = 150.0f,
+                                         bool vulkanClip = true) const
+    {
+        glm::mat4 proj =
+            glm::perspective(glm::radians(zoom_), aspect, nearPlane, farPlane);
+        if (vulkanClip)
+            proj[1][1] *= -1.0f;
+        return proj;
+    }
+
     //Process key pressing
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
