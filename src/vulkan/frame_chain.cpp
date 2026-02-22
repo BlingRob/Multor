@@ -56,11 +56,13 @@ VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
         return capabilities.currentExtent;
     else
         {
-            SDL_DisplayMode DM;
-            SDL_GetCurrentDisplayMode(0, &DM);
+            const SDL_DisplayMode* DM = SDL_GetCurrentDisplayMode(1);
+            if (!DM)
+                throw std::runtime_error(std::string("SDL_GetCurrentDisplayMode failed: ") +
+                                         SDL_GetError());
 
-            VkExtent2D actualExtent = {static_cast<uint32_t>(DM.w),
-                                       static_cast<uint32_t>(DM.h)};
+            VkExtent2D actualExtent = {static_cast<uint32_t>(DM->w),
+                                       static_cast<uint32_t>(DM->h)};
 
             actualExtent.width  = std::clamp(actualExtent.width,
                                              capabilities.minImageExtent.width,

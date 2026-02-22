@@ -169,6 +169,11 @@ void Renderer::UseShader(const std::shared_ptr<ShaderLayout>& shader)
     createCommandBuffers();
 }
 
+void Renderer::SetOverlayDrawCallback(std::function<void(VkCommandBuffer)> callback)
+{
+    overlayDrawCallback_ = std::move(callback);
+}
+
 void Renderer::createGraphicsPipeline()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
@@ -340,79 +345,79 @@ void Renderer::createCommandBuffers()
         throw std::runtime_error("failed to allocate command buffers!");
 
     for (size_t i = 0; i < commandBuffers_.size(); i++)
+        recordCommandBuffer(static_cast<uint32_t>(i));
+}
+
+void Renderer::recordCommandBuffer(uint32_t i)
+{
+    if (i >= commandBuffers_.size())
+        throw std::out_of_range("command buffer index out of range");
+
+    vkResetCommandBuffer(commandBuffers_[i], 0);
+
+    VkCommandBufferBeginInfo beginInfo {};
+    beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.pNext            = nullptr;
+    beginInfo.flags            = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    beginInfo.pInheritanceInfo = nullptr;
+    if (vkBeginCommandBuffer(commandBuffers_[i], &beginInfo) != VK_SUCCESS)
+        throw std::runtime_error("failed to begin recording command buffer!");
+
+    VkRenderPassBeginInfo renderPassInfo {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.pNext = nullptr;
+    renderPassInfo.renderPass        = renderPass_;
+    renderPassInfo.framebuffer       = swapChainFramebuffers_[i];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = swapChainExtent_;
+    std::array<VkClearValue, 2> clearValues {};
+    clearValues[0].color        = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[1].depthStencil = {1.0f, 0};
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues    = clearValues.data();
+
+    VkViewport viewport {};
+    viewport.x        = 0.0f;
+    viewport.y        = 0.0f;
+    viewport.width    = static_cast<float>(swapChainExtent_.width);
+    viewport.height   = static_cast<float>(swapChainExtent_.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor {};
+    scissor.offset = {0, 0};
+    scissor.extent = swapChainExtent_;
+
+    vkCmdBeginRenderPass(commandBuffers_[i], &renderPassInfo,
+                         VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdSetViewport(commandBuffers_[i], 0, 1, &viewport);
+    vkCmdSetScissor(commandBuffers_[i], 0, 1, &scissor);
+    vkCmdBindPipeline(commandBuffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      graphicsPipeline_);
+
+    VkDeviceSize offsets[] = {0};
+    for (auto& mesh : meshes_)
         {
-            //writing down commands
-            VkCommandBufferBeginInfo beginInfo {};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.pNext = nullptr;
-            beginInfo.flags =
-                VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; // Optional
-            beginInfo.pInheritanceInfo = nullptr;             // Optional
-            if (vkBeginCommandBuffer(commandBuffers_[i], &beginInfo) !=
-                VK_SUCCESS)
-                throw std::runtime_error(
-                    "failed to begin recording command buffer!");
-
-            VkRenderPassBeginInfo renderPassInfo {};
-            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.pNext = nullptr;
-            renderPassInfo.renderPass        = renderPass_;
-            renderPassInfo.framebuffer       = swapChainFramebuffers_[i];
-            renderPassInfo.renderArea.offset = {0, 0};
-            renderPassInfo.renderArea.extent = swapChainExtent_;
-            std::array<VkClearValue, 2> clearValues {};
-            clearValues[0].color        = {{0.0f, 0.0f, 0.0f, 1.0f}};
-            clearValues[1].depthStencil = {1.0f, 0};
-
-            renderPassInfo.clearValueCount =
-                static_cast<uint32_t>(clearValues.size());
-            renderPassInfo.pClearValues = clearValues.data();
-            VkViewport viewport {};
-            viewport.x        = 0.0f;
-            viewport.y        = 0.0f;
-            viewport.width    = (float)swapChainExtent_.width;
-            viewport.height   = (float)swapChainExtent_.height;
-            viewport.minDepth = 0.0f;
-            viewport.maxDepth = 1.0f;
-
-            VkRect2D scissor {};
-            scissor.offset = {0, 0};
-            scissor.extent = swapChainExtent_;
-
-            vkCmdBeginRenderPass(commandBuffers_[i], &renderPassInfo,
-                                 VK_SUBPASS_CONTENTS_INLINE);
-
-            //SetViewPort
-            vkCmdSetViewport(commandBuffers_[i], 0, 1, &viewport);
-            //SetScissor
-            vkCmdSetScissor(commandBuffers_[i], 0, 1, &scissor);
-            //Include pipline to commandbuffer
-            vkCmdBindPipeline(commandBuffers_[i],
-                              VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              graphicsPipeline_);
-            //Include drawing operation to commandbuffer
-            VkDeviceSize offsets[] = {0};
-            for (auto& mesh : meshes_)
-                {
-                    vkCmdBindVertexBuffers(
-                        commandBuffers_[i], 0, 1,
-                        &mesh->vertBuffer_->pVertBuf_->buffer_, offsets);
-                    vkCmdBindIndexBuffer(commandBuffers_[i],
-                                         mesh->indexBuffer_->buffer_, 0,
-                                         VK_INDEX_TYPE_UINT32);
-                    vkCmdBindDescriptorSets(commandBuffers_[i],
-                                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                            pipelineLayout_, 0, 1,
-                                            &mesh->sh_->desSet_[i], 0, nullptr);
-                    vkCmdDrawIndexed(commandBuffers_[i],
-                                     static_cast<uint32_t>(mesh->indexesSize_),
-                                     1, 0, 0, 0);
-                }
-
-            vkCmdEndRenderPass(commandBuffers_[i]);
-            if (vkEndCommandBuffer(commandBuffers_[i]) != VK_SUCCESS)
-                throw std::runtime_error("failed to record command buffer!");
+            vkCmdBindVertexBuffers(commandBuffers_[i], 0, 1,
+                                   &mesh->vertBuffer_->pVertBuf_->buffer_,
+                                   offsets);
+            vkCmdBindIndexBuffer(commandBuffers_[i], mesh->indexBuffer_->buffer_,
+                                 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindDescriptorSets(commandBuffers_[i],
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    pipelineLayout_, 0, 1, &mesh->sh_->desSet_[i],
+                                    0, nullptr);
+            vkCmdDrawIndexed(commandBuffers_[i],
+                             static_cast<uint32_t>(mesh->indexesSize_), 1, 0, 0,
+                             0);
         }
+
+    if (overlayDrawCallback_)
+        overlayDrawCallback_(commandBuffers_[i]);
+
+    vkCmdEndRenderPass(commandBuffers_[i]);
+    if (vkEndCommandBuffer(commandBuffers_[i]) != VK_SUCCESS)
+        throw std::runtime_error("failed to record command buffer!");
 }
 
 void Renderer::Draw()
@@ -465,6 +470,7 @@ void Renderer::Draw()
         vkWaitForFences(device, 1, &syncers_[imageIndex_].imagesInFlight_, VK_TRUE,
                         UINT64_MAX);
     syncers_[imageIndex_].imagesInFlight_ = syncers_[currentFrame_].inFlightFences_;
+    recordCommandBuffer(imageIndex_);
 
     VkSubmitInfo submitInfo {};
     submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO;

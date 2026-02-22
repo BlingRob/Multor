@@ -35,6 +35,15 @@ Application::Application()
             pScene_    = std::make_shared<Scene>(pContr_);
             pWindow_   = std::make_shared<Window>(&signals_, pContr_);
             pRenderer_ = std::make_shared<Vulkan::Renderer>(pWindow_);
+            pGui_      = std::make_unique<ImGuiOverlay>();
+            pGui_->AttachWindow(pWindow_.get());
+            pGui_->AttachRenderer(pRenderer_);
+            LOG_INFO(logger.get(), "GUI overlay status: {}", pGui_->BackendStatus());
+            pWindow_->SetEventInterceptor([this](const SDL_Event& e)
+            {
+                if (pGui_)
+                    pGui_->OnSdlEvent(e);
+            });
             SyncLightsToRenderer();
 
             signals_[0] = std::bind(&Vulkan::Renderer::Update, pRenderer_);
@@ -215,6 +224,12 @@ bool Application::MainLoop()
                 return false;
             pWindow_->SwapBuffer();
             UpdateSceneBindings();
+            if (pGui_)
+                {
+                    pGui_->NewFrame();
+                    pGui_->Draw(pScene_, pContr_, pRenderer_);
+                    pGui_->Render();
+                }
             pRenderer_->Draw();
 
             if (maxFps > 0)

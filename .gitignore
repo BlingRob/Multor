@@ -6,11 +6,7 @@
 *.exp
 /build/
 /develop
-/dependencies/assimp
-/dependencies/glm
-/dependencies/imgui
 /dependencies/imgui-filebrowser
-/dependencies/sdl
 /dependencies/stb
 CMakeUserPresets.json
 MyGLRenderEngine-master

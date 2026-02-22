@@ -1,4 +1,4 @@
-/// \file vk_shader_factory.cpp
+/// \file shader_factory.cpp
 
 #include "shader_factory.h"
 

@@ -104,14 +104,14 @@ std::vector<const char*> BaseStructs::getRequiredExtensions()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
-    uint32_t     extensionCount;
-    const char** extensionNames = nullptr;
-    SDL_Vulkan_GetInstanceExtensions(&extensionCount, nullptr);
-    extensionNames = new const char*[extensionCount];
-    SDL_Vulkan_GetInstanceExtensions(&extensionCount, extensionNames);
+    uint32_t extensionCount = 0;
+    const char* const* extensionNames =
+        SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+    if (!extensionNames || extensionCount == 0)
+        throw std::runtime_error(std::string("SDL_Vulkan_GetInstanceExtensions failed: ") +
+                                 SDL_GetError());
 
-    std::vector<const char*> extensions(extensionNames,
-                                        extensionNames + extensionCount);
+    std::vector<const char*> extensions(extensionNames, extensionNames + extensionCount);
 
     if (enableValidationLayers)
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -210,11 +210,10 @@ void BaseStructs::InitLogicalDevice()
     createInfo.pEnabledFeatures = &devFeatures;
     createInfo.enabledExtensionCount =
         static_cast<uint32_t>(deviceExtensions.size());
-    ;
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
     //Create logical device
     if (vkCreateDevice(physicDev, &createInfo, nullptr, &device) != VK_SUCCESS)
-        std::runtime_error("Don't create physical device!");
+        throw std::runtime_error("Don't create physical device!");
     //Get queue from logical device
     vkGetDeviceQueue(device, physicDevIndices.graphicsFamily.value(), 0,
                      &graphicsQueue);
@@ -226,9 +225,9 @@ void BaseStructs::CreateSurface()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
-    if (SDL_Vulkan_CreateSurface(_pWnd->GetWindow().get(), instance,
-                                 &surface) != SDL_TRUE)
-        std::runtime_error("Don't create surface!");
+    if (!SDL_Vulkan_CreateSurface(_pWnd->GetWindow().get(), instance, nullptr,
+                                  &surface))
+        throw std::runtime_error(std::string("Don't create surface: ") + SDL_GetError());
 }
 
 void BaseStructs::CreateCommandPool()
@@ -239,7 +238,7 @@ void BaseStructs::CreateCommandPool()
     poolInfo.pNext            = nullptr;
     poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = physicDevIndices.graphicsFamily.value();
-    poolInfo.flags            = 0; // Optional
+    poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     //Create command buffer pool
     if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) !=
         VK_SUCCESS)

@@ -7,6 +7,7 @@
 #include "vulkan/renderer.h"
 
 #include "gui/window.h"
+#include "gui/imgui_overlay.h"
 #include "loaders/scene_loader.h"
 #include "scene.h"
 #include "scene_objects/light_manager.h"
@@ -60,7 +61,7 @@ private:
     //Time
     Chronometr chron_;
     //GUI
-    //std::unique_ptr<GUI> gui;
+    std::unique_ptr<ImGuiOverlay> pGui_;
 
     //Resource manager
     //std::unique_ptr<ResourceManager> _pResMgr;

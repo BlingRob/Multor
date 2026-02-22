@@ -30,6 +30,10 @@ public:
     }
 
     bool                        ProcEvents();
+    void SetEventInterceptor(std::function<void(const SDL_Event&)> cb)
+    {
+        eventInterceptor_ = std::move(cb);
+    }
     void                        SwapBuffer();
     SDL_Window*                 GetWindow() const;
     std::shared_ptr<PositionController> GetController() const
@@ -65,6 +69,7 @@ private:
 
     //Data for connect with render engine
     std::shared_ptr<PositionController> pContr_;
+    std::function<void(const SDL_Event&)> eventInterceptor_;
 };
 
 } // namespace Multor

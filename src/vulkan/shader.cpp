@@ -1,9 +1,7 @@
-/// \file VkShader.cpp
+/// \file shader.cpp
 #include "shader.h"
 
-// #include <glslang/MachineIndependent/localintermediate.h>
-#include <D:/programming/c++/Multor/build/dependencies/VulkanSDK/glslang/glslang/MachineIndependent/localintermediate.h>
-
+#include <stdexcept>
 
 namespace Multor::Vulkan
 {
@@ -13,45 +11,53 @@ ShaderLayout::ShaderLayout(){}
 void ShaderLayout::AddShaderModule(VkShaderModule modul, shader_type type,
                                    std::unique_ptr<glslang::TProgram> program)
 {
-    glslang::TIntermediate* inter =
-        program->getIntermediate(ShaderConverter::convert<EShLanguage>(type));
+    const auto stageFlags = static_cast<unsigned int>(
+        ShaderConverter::convert<VkShaderStageFlagBits>(type));
+    auto addOrMergeLayoutBinding =
+        [this](VkDescriptorSetLayoutBinding binding)
+    {
+        for (auto& existing : layouts_)
+            {
+                if (existing.binding == binding.binding)
+                    {
+                        if (existing.descriptorType != binding.descriptorType ||
+                            existing.descriptorCount != binding.descriptorCount)
+                            {
+                                // glslang public reflection (without full TType access)
+                                // may report non-sampler uniforms in getNumUniformVariables().
+                                // Keep the first binding (typically UBO) and skip the conflicting one.
+                                return;
+                            }
+                        existing.stageFlags |= binding.stageFlags;
+                        return;
+                    }
+            }
+        layouts_.push_back(binding);
+    };
 
     addPipShStInfo(modul, ShaderConverter::convert<VkShaderStageFlagBits>(type),
-                   inter->getEntryPointName().c_str());
+                   "main");
 
-    /*int var1 = program->getNumUniformBlocks();
-    int var2 = program->getNumUniformVariables();
-    const char* name = program->getUniformBlock(0).name.c_str();
-    const char* name1 = program->getUniform(0).name.c_str();
-    int inn = program->getUniform(0).offset;
-    bool t = program->getUniform(0).getType()->isMatrix();
-    int name2 = program->getPipeInput(0).badReflection().getBinding();*/
-
-    //const char* name1 = program->getUniform(0).getType()->getTypeName().c_str();
-
-    for (size_t i = 0; i < program->getNumUniformBlocks(); ++i)
+    for (std::size_t i{0}; i < program->getNumUniformBlocks(); ++i)
         {
-            layouts_.push_back(VkDescriptorSetLayoutBinding {
-                static_cast<uint32_t>(program->getUniformBlock(i).getBinding()),
+            addOrMergeLayoutBinding(VkDescriptorSetLayoutBinding {
+                static_cast<std::uint32_t>(program->getUniformBlock(static_cast<std::int32_t>(i)).getBinding()),
                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-                static_cast<unsigned int>(
-                    ShaderConverter::convert<VkShaderStageFlagBits>(type)),
+                stageFlags,
                 nullptr});
         }
 
-    for (size_t i = 0; i < program->getNumUniformVariables(); ++i)
+    for (std::size_t i{0}; i < program->getNumUniformVariables(); ++i)
         {
-            if (program->getUniform(i).getType()->isTexture())
-                {
-                    layouts_.push_back(VkDescriptorSetLayoutBinding {
-                        static_cast<uint32_t>(
-                            program->getUniform(i).getBinding()),
-                        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-                        static_cast<unsigned int>(
-                            ShaderConverter::convert<VkShaderStageFlagBits>(
-                                type)),
-                        nullptr});
-                }
+            const int binding =
+                program->getUniform(static_cast<std::int32_t>(i)).getBinding();
+            if (binding < 0)
+                continue;
+            addOrMergeLayoutBinding(VkDescriptorSetLayoutBinding {
+                static_cast<std::uint32_t>(binding),
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+                stageFlags,
+                nullptr});
         }
 
     prg_ = program.release();
