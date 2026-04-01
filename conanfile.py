@@ -10,7 +10,8 @@ class MultorRecipe(ConanFile):
         self.requires("tomlplusplus/3.4.0")
         self.requires("assimp/6.0.2")
         self.requires("glm/1.0.1")
-        self.requires("imgui/1.91.4-docking")    
+        self.requires("imgui/1.91.4-docking")
+        self.requires("joltphysics/5.2.0")
         self.requires("sdl/3.4.0")
 
     def build(self):

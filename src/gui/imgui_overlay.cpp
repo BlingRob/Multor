@@ -304,6 +304,10 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                 {
                     if (scene)
                         {
+                            bool physicsEnabled = scene->IsPhysicsEnabled();
+                            if (ImGui::MenuItem("Physics Enabled", nullptr, physicsEnabled))
+                                scene->SetPhysicsEnabled(!physicsEnabled);
+                            ImGui::Separator();
                             if (ImGui::MenuItem("Add Directional Light"))
                                 {
                                     auto light = std::make_shared<DirectionalLight>(
@@ -388,6 +392,7 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             ImGui::Text("Scene meshes: %zu", info.amountMeshes_);
                             ImGui::Text("Scene lights: %zu", info.amountLights_);
                             ImGui::Text("Scene nodes:  %zu", info.amountNodes_);
+                            ImGui::Text("Physics bodies: %zu", info.amountPhysicsBodies_);
                         }
                     if (renderer)
                         {
@@ -596,6 +601,15 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             bool shadows = renderer->IsShadowsEnabled();
                             if (ImGui::Checkbox("Shadows Enabled", &shadows))
                                 renderer->SetShadowsEnabled(shadows);
+                        }
+                    if (scene)
+                        {
+                            glm::vec3 gravity = scene->GetPhysicsWorld().GetGravity();
+                            if (EditVec3("Gravity", gravity, 0.1f))
+                                scene->GetPhysicsWorld().SetGravity(gravity);
+                            bool physicsEnabled = scene->IsPhysicsEnabled();
+                            if (ImGui::Checkbox("Physics Enabled", &physicsEnabled))
+                                scene->SetPhysicsEnabled(physicsEnabled);
                         }
                     ImGui::Checkbox("Axis Gizmo xOyOz", &showAxisGizmo_);
 

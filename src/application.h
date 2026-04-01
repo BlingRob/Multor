@@ -60,6 +60,8 @@ private:
     //std::shared_ptr<std::unique_ptr<Scene>> _ppScene;
     //Time
     Chronometr chron_;
+    double physicsAccumulator_ = 0.0;
+    double fixedPhysicsStep_ = 1.0 / 60.0;
     //GUI
     std::unique_ptr<ImGuiOverlay> pGui_;
 

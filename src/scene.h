@@ -7,6 +7,7 @@
 #include "scene_objects/light.h"
 #include "scene_objects/mesh.h"
 #include "scene_objects/node.h"
+#include "physics/physics_world.h"
 #include "model.h"
 #include "transformation.h"
 
@@ -27,6 +28,7 @@ struct SceneInformation
     std::size_t amountModels_ = 0;
     std::size_t amountLights_ = 0;
     std::size_t amountNodes_  = 0;
+    std::size_t amountPhysicsBodies_ = 0;
 };
 
 class Scene
@@ -63,6 +65,14 @@ public:
     void SetController(std::shared_ptr<PositionController> controller);
     std::shared_ptr<PositionController> GetController() const;
     std::shared_ptr<Camera> GetCamera() const;
+    PhysicsWorld& GetPhysicsWorld();
+    const PhysicsWorld& GetPhysicsWorld() const;
+    PhysicsWorld::BodyId AddRigidBody(const std::shared_ptr<Node>& node,
+                                      const RigidBodyDesc& rigidBody,
+                                      const ColliderDesc& collider);
+    void StepPhysics(float dt);
+    void SetPhysicsEnabled(bool enabled);
+    bool IsPhysicsEnabled() const;
 
     SceneInformation GetInfo() const;
 
@@ -76,6 +86,7 @@ private:
     std::map<std::size_t, std::shared_ptr<Model> >    models_;
     std::map<std::size_t, std::shared_ptr<BLight> >   lights_;
     std::map<std::size_t, std::shared_ptr<Node> >     nodes_;
+    std::unique_ptr<PhysicsWorld> physics_;
 
     glm::vec4 backgroundColor_ {0.0f, 0.0f, 0.0f, 1.0f};
     std::shared_ptr<Node> backgroundNode_;

@@ -11,6 +11,7 @@ namespace Multor
 Scene::Scene(std::shared_ptr<PositionController> controller)
     : controller_(std::move(controller))
 {
+    physics_ = std::make_unique<PhysicsWorld>();
 }
 
 void Scene::SetBackGround(const glm::vec4& color)
@@ -125,6 +126,44 @@ std::shared_ptr<Camera> Scene::GetCamera() const
     return controller_ ? controller_->cam_ : nullptr;
 }
 
+PhysicsWorld& Scene::GetPhysicsWorld()
+{
+    return *physics_;
+}
+
+const PhysicsWorld& Scene::GetPhysicsWorld() const
+{
+    return *physics_;
+}
+
+PhysicsWorld::BodyId Scene::AddRigidBody(const std::shared_ptr<Node>& node,
+                                         const RigidBodyDesc& rigidBody,
+                                         const ColliderDesc& collider)
+{
+    if (!physics_)
+        throw std::runtime_error("physics world is not initialized");
+    return physics_->AddBody(node, rigidBody, collider);
+}
+
+void Scene::StepPhysics(float dt)
+{
+    if (!physics_)
+        return;
+    physics_->Step(dt);
+}
+
+void Scene::SetPhysicsEnabled(bool enabled)
+{
+    if (!physics_)
+        return;
+    physics_->SetEnabled(enabled);
+}
+
+bool Scene::IsPhysicsEnabled() const
+{
+    return physics_ ? physics_->IsEnabled() : false;
+}
+
 SceneInformation Scene::GetInfo() const
 {
     return {
@@ -132,6 +171,7 @@ SceneInformation Scene::GetInfo() const
         .amountModels_ = models_.size(),
         .amountLights_ = lights_.size(),
         .amountNodes_  = nodes_.size(),
+        .amountPhysicsBodies_ = physics_ ? physics_->GetBodyCount() : 0,
     };
 }
 

@@ -694,21 +694,6 @@ void Renderer::createUniformBuffers()
                     mesh->tr_->SetModelChangedCallback(
                         std::bind(&Renderer::markShadowsDirty, this));
                 }
-            /*
-		for (size_t i = 0; i < swapChainImages.size(); ++i)
-		{
-			mesh->matrixes.push_back(MeshFac->createBuffer(TransBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-			/*
-			mesh->materialUBO_.push_back(MeshFac->createBuffer(MatBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-
-			mesh->viewPosUBO_.push_back(MeshFac->createBuffer(ViewBufObj, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-		}*/
         }
 }
 
@@ -937,92 +922,6 @@ void Renderer::createDescriptorSets()
                                          nullptr, nullptr});
                                 }
                         }
-                    /*
-			VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = mesh->tr_->matrixes[i]->buffer_;// TransformUBO[i]->buffer_;
-			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(UBOs::Transform);
-			uint32_t bindpoint = 0;
-			std::vector<VkWriteDescriptorSet> descriptorWrites{};
-			descriptorWrites.push_back(
-				{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				nullptr,
-				mesh->DesSet[i],
-				bindpoint,
-				0,
-				1,
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				nullptr,
-				&bufferInfo,
-				nullptr
-				});*/
-                    /*
-			bufferInfo.buffer = mesh->viewPosUBO_[i]->buffer_;//viewPosUBO_[i]->buffer_;
-			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(UBOs::ViewPosition);
-
-			++bindpoint;
-			descriptorWrites.push_back(
-				{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				nullptr,
-				mesh->DesSet[i],
-				bindpoint,
-				0,
-				1,
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				nullptr,
-				&bufferInfo,
-				nullptr
-				});
-
-			bufferInfo.buffer = mesh->materialUBO_[i]->buffer_;// materialUBO_[i]->buffer_;
-			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(Material);
-
-			++bindpoint;
-			descriptorWrites.push_back(
-				{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				nullptr,
-				mesh->DesSet[i],
-				bindpoint,
-				0,
-				1,
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				nullptr,
-				&bufferInfo,
-				nullptr
-				});
-
-			//bind texture with set
-			for (auto& tex : mesh->textures)
-			{
-				bindpoint++;
-				VkDescriptorImageInfo imageInfo{};
-				imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				imageInfo.imageView = tex->view_;
-				imageInfo.sampler = tex->sampler_;
-
-				descriptorWrites.push_back
-				(
-					{
-					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					nullptr,
-					mesh->DesSet[i],
-					bindpoint,
-					0,
-					1,
-					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					&imageInfo,
-					nullptr,
-					nullptr
-					}
-				);
-				
-			}*/
-
                     vkUpdateDescriptorSets(
                         device, static_cast<uint32_t>(descriptorWrites.size()),
                         descriptorWrites.data(), 0, nullptr);
@@ -1103,20 +1002,9 @@ void Renderer::clearIncludePart()
 {
     LOG_TRACE_L1(logger_.get(), __FUNCTION__);
 
-    //materialUBO_.clear();
-    //TransformUBO.clear();
-    //viewPosUBO_.clear();
-
     for (auto& mesh : meshes_)
         {
             mesh->tr_.reset();
-            /*
-		for (size_t i = 0; i < swapChainImages.size(); ++i)
-		{
-			mesh->materialUBO_.clear();
-			mesh->viewPosUBO_.clear();
-			mesh->matrixes.clear();
-        }*/
         }
     lightsUbo_.reset();
     directionalShadowUboBuffers_.clear();

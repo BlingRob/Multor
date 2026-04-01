@@ -108,6 +108,132 @@ int main(int argc, char* args[])
                 return app.GetRenderer()->AddMesh(ground);
             };
 
+            auto buildTexturedCubeMesh =
+                [](const std::shared_ptr<Multor::BaseTexture>& tex) -> std::shared_ptr<BaseMesh>
+            {
+                const float cubePos[72] = {
+                    -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f,
+                    -0.5f, 0.5f,  0.5f,
+                    0.5f,  -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
+                    0.5f,  0.5f,  -0.5f,
+                    -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,
+                    -0.5f, 0.5f,  -0.5f,
+                    0.5f,  -0.5f, 0.5f,  0.5f,  -0.5f, -0.5f, 0.5f, 0.5f, -0.5f,
+                    0.5f,  0.5f,  0.5f,
+                    -0.5f, 0.5f,  0.5f,  0.5f,  0.5f, 0.5f,  0.5f, 0.5f, -0.5f,
+                    -0.5f, 0.5f,  -0.5f,
+                    -0.5f, -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, 0.5f, -0.5f, 0.5f,
+                    -0.5f, -0.5f, 0.5f};
+
+                const float cubeTexCoords[48] = {
+                    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
+
+                std::vector<std::uint32_t> indices = {
+                    0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11,
+                    12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22,
+                    20, 22, 23};
+
+                return std::make_shared<BaseMesh>(
+                    std::make_unique<Vertexes>(24, &cubePos[0], std::move(indices),
+                                               nullptr, &cubeTexCoords[0]),
+                    nullptr,
+                    std::vector<std::shared_ptr<BaseTexture> >({tex}));
+            };
+
+            auto buildGroundMesh =
+                [](const std::shared_ptr<Multor::BaseTexture>& tex) -> std::shared_ptr<BaseMesh>
+            {
+                const float planeSize = 20.0f;
+                const float y = -1.0f;
+                const float planePos[12] = {
+                    -planeSize, y, -planeSize, planeSize, y, -planeSize,
+                    planeSize, y, planeSize, -planeSize, y, planeSize};
+                const float planeNormals[12] = {
+                    0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+                    0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f};
+                const float planeTexCoords[8] = {
+                    0.0f, 0.0f, 8.0f, 0.0f, 8.0f, 8.0f, 0.0f, 8.0f};
+                std::vector<std::uint32_t> planeIndices = {0, 1, 2, 0, 2, 3};
+
+                return std::make_shared<BaseMesh>(
+                    std::make_unique<Vertexes>(4, &planePos[0], std::move(planeIndices),
+                                               &planeNormals[0], &planeTexCoords[0]),
+                    nullptr,
+                    std::vector<std::shared_ptr<BaseTexture> >({tex}));
+            };
+
+            auto buildSamplePhysicsScene =
+                [&app, &buildTexturedCubeMesh, &buildGroundMesh]() -> std::shared_ptr<Scene>
+            {
+                auto baseScene = app.GetScene();
+                auto scene = std::make_shared<Scene>(
+                    baseScene ? baseScene->GetController() : nullptr);
+
+                auto cubeTex = std::make_shared<BaseTexture>(
+                    std::string("Diff"), std::string("core"),
+                    Texture_Types::Diffuse,
+                    std::vector<std::shared_ptr<Image> >(
+                        {ImageLoader::LoadTexture("./Res/matrix.jpg")}));
+                auto groundTex = std::make_shared<BaseTexture>(
+                    std::string("Ground"), std::string("core"),
+                    Texture_Types::Diffuse,
+                    std::vector<std::shared_ptr<Image> >(
+                        {ImageLoader::LoadTexture("./Res/wall.jpg")}));
+
+                auto groundNode = std::make_shared<Node>();
+                groundNode->SetName("physics_ground");
+                groundNode->addMesh(buildGroundMesh(groundTex));
+                scene->AddNode(groundNode);
+                scene->AddRigidBody(
+                    groundNode,
+                    RigidBodyDesc {.type_ = RigidBodyType::Static},
+                    ColliderDesc {.shape_ = ColliderShape::Box,
+                                  .halfExtents_ = glm::vec3(20.0f, 1.0f, 20.0f)});
+
+                auto cubeA = std::make_shared<Node>();
+                cubeA->SetName("physics_cube_a");
+                cubeA->addMesh(buildTexturedCubeMesh(cubeTex));
+                cubeA->SetLocalTransform(
+                    glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 4.0f, 0.0f)));
+                scene->AddNode(cubeA);
+                scene->AddRigidBody(
+                    cubeA,
+                    RigidBodyDesc {.type_ = RigidBodyType::Dynamic,
+                                   .mass_ = 1.0f,
+                                   .linearDamping_ = 0.05f},
+                    ColliderDesc {.shape_ = ColliderShape::Box,
+                                  .halfExtents_ = glm::vec3(0.5f)});
+
+                auto cubeB = std::make_shared<Node>();
+                cubeB->SetName("physics_cube_b");
+                cubeB->addMesh(buildTexturedCubeMesh(cubeTex));
+                cubeB->SetLocalTransform(
+                    glm::translate(glm::mat4(1.0f), glm::vec3(0.75f, 6.0f, 0.0f)));
+                scene->AddNode(cubeB);
+                scene->AddRigidBody(
+                    cubeB,
+                    RigidBodyDesc {.type_ = RigidBodyType::Dynamic,
+                                   .mass_ = 1.0f,
+                                   .linearDamping_ = 0.03f},
+                    ColliderDesc {.shape_ = ColliderShape::Box,
+                                  .halfExtents_ = glm::vec3(0.5f)});
+
+                scene->AddLight(std::make_shared<DirectionalLight>(
+                    glm::vec3(0.18f, 0.18f, 0.18f),
+                    glm::vec3(0.95f, 0.95f, 0.95f),
+                    glm::vec3(0.35f, 0.35f, 0.35f),
+                    glm::vec3(1.0f, 0.0f, 0.0f),
+                    glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f))));
+                scene->SetBackGround(glm::vec4(0.08f, 0.09f, 0.12f, 1.0f));
+                scene->SetPhysicsEnabled(true);
+                return scene;
+            };
+
             bool loadedScene = false;
             if (argc > 1 && args && args[1] != nullptr)
                 loadedScene = app.LoadSceneFromFile(std::string_view(args[1]));
@@ -128,18 +254,7 @@ int main(int argc, char* args[])
             std::shared_ptr<Vulkan::Mesh> ground;
             if (!loadedScene)
                 {
-                    app.AddLight(std::make_shared<DirectionalLight>(
-                        glm::vec3(0.15f, 0.15f, 0.15f),
-                        glm::vec3(0.9f, 0.9f, 0.9f),
-                        glm::vec3(0.2f, 0.2f, 0.2f),
-                        glm::vec3(1.0f, 0.0f, 0.0f),
-                        glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f))));
-                    std::tie(m1, m2) = spawnDebugCubes();
-                    ground = spawnDebugGroundPlane();
-                    if (m2 && m2->tr_)
-                        m2->tr_->updateModel(app.GetRenderer()->GetCurFrame(),
-                                             glm::translate(glm::mat4(1.0f),
-                                                            glm::vec3(1.2f, 0.0f, 0.0f)));
+                    app.SetScene(buildSamplePhysicsScene());
                 }
             else
                 {

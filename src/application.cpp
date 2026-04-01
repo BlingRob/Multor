@@ -5,6 +5,7 @@
 #include "configure.h"
 
 #include <filesystem>
+#include <algorithm>
 #include <chrono>
 #include <thread>
 
@@ -188,6 +189,14 @@ void Application::SyncSceneToRenderer()
             collectNodeBindings(it->second->GetRoot());
         }
 
+    auto nodes = pScene_->GetNodes();
+    for (auto it = nodes.first; it != nodes.second; ++it)
+        {
+            if (!it->second)
+                continue;
+            collectNodeBindings(it->second);
+        }
+
     auto vkMeshes = pRenderer_->AddMeshes(std::move(meshClones));
     const std::size_t bindCount =
         std::min(sceneNodesForMeshes.size(), vkMeshes.size());
@@ -226,6 +235,17 @@ bool Application::MainLoop()
             pContr_->dt_ = static_cast<float>(chron_());
             if (!pWindow_->ProcEvents())
                 return false;
+            if (pScene_ && pScene_->IsPhysicsEnabled())
+                {
+                    physicsAccumulator_ += static_cast<double>(pContr_->dt_);
+                    physicsAccumulator_ =
+                        std::min(physicsAccumulator_, fixedPhysicsStep_ * 8.0);
+                    while (physicsAccumulator_ >= fixedPhysicsStep_)
+                        {
+                            pScene_->StepPhysics(static_cast<float>(fixedPhysicsStep_));
+                            physicsAccumulator_ -= fixedPhysicsStep_;
+                        }
+                }
             pWindow_->SwapBuffer();
             UpdateSceneBindings();
             if (pGui_)

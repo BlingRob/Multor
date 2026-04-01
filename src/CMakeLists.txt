@@ -7,8 +7,20 @@ find_package(quill REQUIRED CONFIG)
 find_package(tomlplusplus REQUIRED CONFIG)
 find_package(imgui REQUIRED CONFIG)
 find_package(assimp REQUIRED CONFIG)
+find_package(Jolt REQUIRED CONFIG)
 find_package(SDL3 REQUIRED CONFIG)
 find_package(glm)
+
+set(JOLT_TARGET "")
+if(TARGET Jolt::Jolt)
+    set(JOLT_TARGET Jolt::Jolt)
+elseif(TARGET joltphysics::joltphysics)
+    set(JOLT_TARGET joltphysics::joltphysics)
+elseif(TARGET JoltPhysics::Jolt)
+    set(JOLT_TARGET JoltPhysics::Jolt)
+else()
+    message(FATAL_ERROR "Jolt package found, but no supported imported target was exported")
+endif()
 
 #Searching sourse files
 file(GLOB_RECURSE SOURCE_FILES
@@ -60,8 +72,11 @@ target_link_libraries(${PROJECT_NAME}
     tomlplusplus::tomlplusplus
     imgui::imgui
     assimp::assimp
+    ${JOLT_TARGET}
     SDL3::SDL3
     glm::glm)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE MULTOR_HAS_JOLT=1)
 
 if(IMGUI_BACKEND_INCLUDE_DIR)
     target_include_directories(${PROJECT_NAME} PRIVATE ${IMGUI_BACKEND_INCLUDE_DIR})
