@@ -30,10 +30,12 @@ public:
     void SetMaterial(std::unique_ptr<Material> mat);
     void SetVertexes(std::unique_ptr<Vertexes> verts);
     void AddTexture(std::shared_ptr<BaseTexture> tex);
+    std::shared_ptr<BaseTexture> FindTexture(Texture_Types type) const;
     std::unique_ptr<BaseMesh> Clone() const;
     //
     Vertexes*               GetVertexes();
     Material*               GetMaterial();
+    const Material*         GetMaterial() const;
     std::pair<TexIT, TexIT> GetTextures();
     //
     /* Mesh's constants */

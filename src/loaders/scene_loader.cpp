@@ -287,22 +287,52 @@ std::shared_ptr<BaseMesh> SceneLoader::processMesh(aiMesh* mesh)
     if (mesh->mMaterialIndex < scene_->mNumMaterials)
         {
             aiMaterial* srcMat = scene_->mMaterials[mesh->mMaterialIndex];
+            const bool hasBaseColor =
+                srcMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0;
+            const bool hasMetalness =
+                srcMat->GetTextureCount(aiTextureType_METALNESS) > 0;
+            const bool hasRoughness =
+                srcMat->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS) > 0;
+            const bool hasAO =
+                srcMat->GetTextureCount(aiTextureType_AMBIENT_OCCLUSION) > 0;
+            const bool hasEmissive =
+                srcMat->GetTextureCount(aiTextureType_EMISSIVE) > 0;
+
             auto appendTextures = [&out](std::vector<std::shared_ptr<BaseTexture> >&& texes)
             {
                 for (auto& tex : texes)
                     if (tex)
                         out->AddTexture(tex);
             };
-            appendTextures(processTextures(srcMat, aiTextureType_DIFFUSE,
+
+            // Base color goes first so legacy shading can keep using the first sampler.
+            appendTextures(processTextures(srcMat, aiTextureType_BASE_COLOR,
                                            Texture_Types::Diffuse));
+            if (!hasBaseColor)
+                appendTextures(processTextures(srcMat, aiTextureType_DIFFUSE,
+                                               Texture_Types::Diffuse));
+
             appendTextures(processTextures(srcMat, aiTextureType_SPECULAR,
                                            Texture_Types::Specular));
             appendTextures(processTextures(srcMat, aiTextureType_NORMALS,
                                            Texture_Types::Normal));
+            appendTextures(processTextures(srcMat, aiTextureType_METALNESS,
+                                           Texture_Types::Metallic));
+            appendTextures(processTextures(srcMat, aiTextureType_DIFFUSE_ROUGHNESS,
+                                           Texture_Types::Roughness));
             appendTextures(processTextures(srcMat, aiTextureType_EMISSIVE,
                                            Texture_Types::Emissive));
             appendTextures(processTextures(srcMat, aiTextureType_AMBIENT_OCCLUSION,
                                            Texture_Types::Ambient_occlusion));
+
+            if ((hasBaseColor || hasMetalness || hasRoughness || hasAO || hasEmissive) &&
+                out->GetMaterial())
+                {
+                    out->GetMaterial()->UseMetallicRoughnessPBR(
+                        out->GetMaterial()->baseColorFactor,
+                        out->GetMaterial()->metallicFactor,
+                        out->GetMaterial()->roughnessFactor);
+                }
         }
 
     return out;
@@ -354,7 +384,10 @@ std::unique_ptr<Material> SceneLoader::processMaterial(aiMaterial* src)
         return out;
 
     aiColor3D color(0.0f, 0.0f, 0.0f);
+    aiColor4D baseColor(1.0f, 1.0f, 1.0f, 1.0f);
     float shininess = 0.0f;
+    float metallic = out->metallicFactor;
+    float roughness = out->roughnessFactor;
 
     if (src->Get(AI_MATKEY_COLOR_AMBIENT, color) == AI_SUCCESS)
         out->ambient = glm::vec3(color.r, color.g, color.b);
@@ -364,6 +397,23 @@ std::unique_ptr<Material> SceneLoader::processMaterial(aiMaterial* src)
         out->specular = glm::vec3(color.r, color.g, color.b);
     if (src->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
         out->shininess = shininess;
+    if (src->Get(AI_MATKEY_BASE_COLOR, baseColor) == AI_SUCCESS)
+        out->baseColorFactor =
+            glm::vec4(baseColor.r, baseColor.g, baseColor.b, baseColor.a);
+    if (src->Get(AI_MATKEY_METALLIC_FACTOR, metallic) == AI_SUCCESS)
+        out->metallicFactor = metallic;
+    if (src->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == AI_SUCCESS)
+        out->roughnessFactor = roughness;
+    if (src->Get(AI_MATKEY_COLOR_EMISSIVE, color) == AI_SUCCESS)
+        out->emissiveFactor = glm::vec3(color.r, color.g, color.b);
+
+    if (src->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
+        src->GetTextureCount(aiTextureType_METALNESS) > 0 ||
+        src->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS) > 0)
+        {
+            out->UseMetallicRoughnessPBR(out->baseColorFactor, out->metallicFactor,
+                                         out->roughnessFactor);
+        }
 
     return out;
 }

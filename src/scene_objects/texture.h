@@ -10,6 +10,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <cstdint>
 
 #include <glm/glm.hpp>
 //#include "assimp/scene.h"
@@ -27,7 +28,9 @@ enum class Texture_Types : uint8_t
     Height             = 4,
     Metallic_roughness = 5,
     Ambient_occlusion  = 6,
-    Skybox             = 7
+    Skybox             = 7,
+    Metallic           = 8,
+    Roughness          = 9
 };
 
 struct BaseTexture : public Entity
@@ -37,11 +40,11 @@ struct BaseTexture : public Entity
                 std::vector<std::shared_ptr<Image> > images);
     virtual ~BaseTexture() {};
     //virtual bool createTexture();
-    bool                                 IsCreated();
-    unsigned int                         GetId();
-    std::string                          GetPath();
-    Texture_Types                        GetType();
-    std::vector<std::shared_ptr<Image> > GetImages();
+    bool                                 IsCreated() const;
+    unsigned int                         GetId() const;
+    std::string                          GetPath() const;
+    Texture_Types                        GetType() const;
+    std::vector<std::shared_ptr<Image> > GetImages() const;
     void                                 AddImage(std::shared_ptr<Image> img);
 
 protected:

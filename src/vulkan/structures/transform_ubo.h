@@ -3,7 +3,7 @@
 #pragma once
 
 #include "../objects/buffer.h"
-#include "../../scene_objects/material.h"
+#include "material_ubo.h"
 
 #include <vector>
 #include <memory>
@@ -39,6 +39,7 @@ struct TransformUBO
     void updateModel(std::size_t frame, const glm::mat4& newTransformMatrix);
     void updateView(std::size_t frame, const glm::vec3& newPosition);
     void updatePV(std::size_t frame, const glm::mat4& newProjectViewMatrix);
+    void updateMaterial(std::size_t frame, const UBOs::MaterialData& material);
     void SetModelChangedCallback(std::function<void()> callback);
 
     std::vector<std::unique_ptr<Buffer> > matrixes_;
@@ -46,7 +47,7 @@ struct TransformUBO
     std::vector<std::unique_ptr<Buffer> > materialUBO_;
     std::vector<glm::mat4>                modelCache_;
 
-    static const VkDeviceSize MatBufObj   = sizeof(Material);
+    static const VkDeviceSize MatBufObj   = sizeof(UBOs::MaterialData);
     static const VkDeviceSize TransBufObj = sizeof(UBOs::Transform);
     static const VkDeviceSize ViewBufObj  = sizeof(UBOs::ViewPosition);
 

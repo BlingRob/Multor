@@ -48,6 +48,16 @@ void TransformUBO::updatePV(std::size_t      frame,
     vkUnmapMemory(dev_, matrixes_[frame]->bufferMemory_);
 }
 
+void TransformUBO::updateMaterial(std::size_t frame,
+                                  const UBOs::MaterialData& material)
+{
+    void* data;
+    vkMapMemory(dev_, materialUBO_[frame]->bufferMemory_, 0, MatBufObj, 0,
+                &data);
+    std::memcpy(data, &material, sizeof(material));
+    vkUnmapMemory(dev_, materialUBO_[frame]->bufferMemory_);
+}
+
 void TransformUBO::SetModelChangedCallback(std::function<void()> callback)
 {
     onModelChanged_ = std::move(callback);

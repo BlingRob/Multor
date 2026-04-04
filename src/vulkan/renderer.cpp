@@ -688,7 +688,8 @@ void Renderer::createUniformBuffers()
 
     for (auto& mesh : meshes_)
         {
-            mesh->tr_ = meshFactory_->CreateUBOBuffers(swapChainImages_.size());
+            mesh->tr_ = meshFactory_->CreateUBOBuffers(mesh->materialData_,
+                                                       swapChainImages_.size());
             if (mesh->tr_)
                 {
                     mesh->tr_->SetModelChangedCallback(
@@ -855,6 +856,16 @@ void Renderer::createDescriptorSets()
                                             bufferInfo.range =
                                                 sizeof(UBOs::PointShadows);
                                         }
+                                    else if (layout.binding == 8 &&
+                                             mesh->tr_ &&
+                                             i < mesh->tr_->materialUBO_.size())
+                                        {
+                                            bufferInfo.buffer =
+                                                mesh->tr_->materialUBO_[i]
+                                                    ->buffer_;
+                                            bufferInfo.range =
+                                                TransformUBO::MatBufObj;
+                                        }
                                     else
                                         {
                                             throw std::runtime_error(
@@ -876,18 +887,27 @@ void Renderer::createDescriptorSets()
                             if (layout.descriptorType ==
                                 VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
                                 {
+                                    auto resolveFallbackTexture =
+                                        [&mesh]() -> std::shared_ptr<Texture>
+                                    {
+                                        if (mesh->baseColorTex_)
+                                            return mesh->baseColorTex_;
+                                        if (!mesh->textures_.empty())
+                                            return *mesh->textures_.begin();
+                                        return nullptr;
+                                    };
+
                                     VkDescriptorImageInfo imageInfo {};
                                     if (layout.binding == 3)
                                         {
-                                            if (mesh->textures_.empty())
+                                            auto tex = resolveFallbackTexture();
+                                            if (!tex)
                                                 throw std::runtime_error(
                                                     "mesh has no texture for sampler binding");
                                             imageInfo.imageLayout =
                                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                                            imageInfo.imageView =
-                                                (*mesh->textures_.begin())->view_;
-                                            imageInfo.sampler =
-                                                (*mesh->textures_.begin())->sampler_;
+                                            imageInfo.imageView = tex->view_;
+                                            imageInfo.sampler = tex->sampler_;
                                         }
                                     else if (layout.binding == 5)
                                         {
@@ -906,6 +926,43 @@ void Renderer::createDescriptorSets()
                                                 pointShadowMaps_.view_;
                                             imageInfo.sampler =
                                                 pointShadowMaps_.sampler_;
+                                        }
+                                    else if (layout.binding >= 9 &&
+                                             layout.binding <= 14)
+                                        {
+                                            std::shared_ptr<Texture> tex;
+                                            switch (layout.binding)
+                                                {
+                                                case 9:
+                                                    tex = mesh->baseColorTex_;
+                                                    break;
+                                                case 10:
+                                                    tex = mesh->normalTex_;
+                                                    break;
+                                                case 11:
+                                                    tex = mesh->metallicTex_;
+                                                    break;
+                                                case 12:
+                                                    tex = mesh->roughnessTex_;
+                                                    break;
+                                                case 13:
+                                                    tex = mesh->aoTex_;
+                                                    break;
+                                                case 14:
+                                                    tex = mesh->emissiveTex_;
+                                                    break;
+                                                default:
+                                                    break;
+                                                }
+                                            if (!tex)
+                                                tex = resolveFallbackTexture();
+                                            if (!tex)
+                                                throw std::runtime_error(
+                                                    "mesh has no fallback texture for sampler binding");
+                                            imageInfo.imageLayout =
+                                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                                            imageInfo.imageView = tex->view_;
+                                            imageInfo.sampler = tex->sampler_;
                                         }
                                     else
                                         {

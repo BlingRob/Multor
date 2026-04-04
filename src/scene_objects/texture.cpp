@@ -14,27 +14,27 @@ BaseTexture::BaseTexture(const std::string& name, const std::string& path,
     imgs_ = images;
 }
 
-bool BaseTexture::IsCreated()
+bool BaseTexture::IsCreated() const
 {
     return created_;
 }
 
-unsigned int BaseTexture::GetId()
+unsigned int BaseTexture::GetId() const
 {
     return id_;
 }
 
-std::string BaseTexture::GetPath()
+std::string BaseTexture::GetPath() const
 {
     return path_;
 }
 
-Texture_Types BaseTexture::GetType()
+Texture_Types BaseTexture::GetType() const
 {
     return type_;
 }
 
-std::vector<std::shared_ptr<Image>> BaseTexture::GetImages()
+std::vector<std::shared_ptr<Image>> BaseTexture::GetImages() const
 {
     return imgs_;
 }

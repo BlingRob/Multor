@@ -14,6 +14,11 @@ Material* BaseMesh::GetMaterial()
     return material_.get();
 }
 
+const Material* BaseMesh::GetMaterial() const
+{
+    return material_.get();
+}
+
 std::pair<BaseMesh::TexIT, BaseMesh::TexIT> BaseMesh::GetTextures()
 {
     return std::make_pair<BaseMesh::TexIT>(textures_.begin(), textures_.end());
@@ -43,6 +48,16 @@ void BaseMesh::SetVertexes(std::unique_ptr<Vertexes> verts)
 void BaseMesh::AddTexture(std::shared_ptr<BaseTexture> tex)
 {
     textures_.emplace_back(std::move(tex));
+}
+
+std::shared_ptr<BaseTexture> BaseMesh::FindTexture(Texture_Types type) const
+{
+    for (const auto& tex : textures_)
+        {
+            if (tex && tex->GetType() == type)
+                return tex;
+        }
+    return nullptr;
 }
 
 std::unique_ptr<BaseMesh> BaseMesh::Clone() const

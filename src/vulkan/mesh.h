@@ -4,6 +4,7 @@
 
 #include "objects/vertex_buffer.h"
 #include "structures/transform_ubo.h"
+#include "structures/material_ubo.h"
 #include "shader.h"
 #include "objects/texture.h"
 
@@ -21,6 +22,13 @@ struct Mesh
     std::unique_ptr<Buffer> indexBuffer_;
     /* Textures */
     std::vector<std::shared_ptr<Texture> > textures_;
+    std::shared_ptr<Texture> baseColorTex_;
+    std::shared_ptr<Texture> normalTex_;
+    std::shared_ptr<Texture> metallicTex_;
+    std::shared_ptr<Texture> roughnessTex_;
+    std::shared_ptr<Texture> aoTex_;
+    std::shared_ptr<Texture> emissiveTex_;
+    UBOs::MaterialData materialData_ {};
     
     /*  Dynamic object  */
     std::shared_ptr<Shader> sh_;

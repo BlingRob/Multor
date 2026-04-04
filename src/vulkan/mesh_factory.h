@@ -21,7 +21,8 @@ public:
     {
     }
     std::unique_ptr<Mesh>       CreateMesh(std::unique_ptr<BaseMesh> mesh);
-    std::unique_ptr<TransformUBO> CreateUBOBuffers(std::size_t nFrames);
+    std::unique_ptr<TransformUBO> CreateUBOBuffers(const UBOs::MaterialData& material,
+                                                   std::size_t nFrames);
 };
 
 } // namespace Multor::Vulkan

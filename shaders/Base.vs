@@ -11,10 +11,10 @@ layout (location = 4) in vec3 aBitangent;
 struct VS_OUT
 {
     vec3 FragPos;
-    vec3 TangentViewPos;
     vec2 TexCoords;
-    vec3 TangentFragPos;
     vec3 Normal;
+    vec3 Tangent;
+    vec3 Bitangent;
 };
 
 layout(set = 0,binding = 0) uniform Transform
@@ -30,6 +30,8 @@ void main()
 {
     vs_out.FragPos = vec3(transform.model * vec4(position, 1.0));
     vs_out.Normal = normalize((transform.NormalMatrix * vec4(vertexNormal, 0.0)).xyz);
+    vs_out.Tangent = normalize((transform.NormalMatrix * vec4(aTangent, 0.0)).xyz);
+    vs_out.Bitangent = normalize((transform.NormalMatrix * vec4(aBitangent, 0.0)).xyz);
     vs_out.TexCoords = texCoord;
     gl_Position = transform.PV * transform.model * vec4(position, 1.0);
 }
