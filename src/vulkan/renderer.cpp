@@ -2,13 +2,127 @@
 
 #include "renderer.h"
 
+#include "../utils/image_loader.h"
+
+#include <glm/glm.hpp>
+
 #include <chrono>
 #include <cstring>
 #include <functional>
+#include <cmath>
 #include <unordered_map>
 
 namespace Multor::Vulkan
 {
+
+namespace
+{
+float RadicalInverseVdC(uint32_t bits)
+{
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return static_cast<float>(bits) * 2.3283064365386963e-10f;
+}
+
+glm::vec2 Hammersley(uint32_t i, uint32_t n)
+{
+    return {static_cast<float>(i) / static_cast<float>(n), RadicalInverseVdC(i)};
+}
+
+glm::vec3 ImportanceSampleGGX(const glm::vec2& xi, const glm::vec3& n,
+                              float roughness)
+{
+    const float a = roughness * roughness;
+    const float phi = 2.0f * 3.14159265358979323846f * xi.x;
+    const float cosTheta =
+        std::sqrt((1.0f - xi.y) / (1.0f + (a * a - 1.0f) * xi.y));
+    const float sinTheta =
+        std::sqrt(std::max(0.0f, 1.0f - cosTheta * cosTheta));
+
+    glm::vec3 h {
+        std::cos(phi) * sinTheta,
+        std::sin(phi) * sinTheta,
+        cosTheta};
+
+    glm::vec3 up = std::abs(n.z) < 0.999f ? glm::vec3(0.0f, 0.0f, 1.0f)
+                                          : glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 tangent = glm::normalize(glm::cross(up, n));
+    glm::vec3 bitangent = glm::cross(n, tangent);
+    return glm::normalize(tangent * h.x + bitangent * h.y + n * h.z);
+}
+
+float GeometrySchlickGGX(float ndotV, float roughness)
+{
+    const float a = roughness;
+    const float k = (a * a) * 0.5f;
+    return ndotV / std::max(ndotV * (1.0f - k) + k, 1.0e-5f);
+}
+
+float GeometrySmith(float roughness, float ndotV, float ndotL)
+{
+    return GeometrySchlickGGX(ndotV, roughness) *
+           GeometrySchlickGGX(ndotL, roughness);
+}
+
+glm::vec2 IntegrateBrdf(float ndotV, float roughness)
+{
+    glm::vec3 v {std::sqrt(std::max(0.0f, 1.0f - ndotV * ndotV)), 0.0f, ndotV};
+    glm::vec3 n {0.0f, 0.0f, 1.0f};
+
+    float a = 0.0f;
+    float b = 0.0f;
+    constexpr uint32_t sampleCount = 1024;
+    for (uint32_t i = 0; i < sampleCount; ++i)
+        {
+            glm::vec2 xi = Hammersley(i, sampleCount);
+            glm::vec3 h = ImportanceSampleGGX(xi, n, roughness);
+            glm::vec3 l = glm::normalize(2.0f * glm::dot(v, h) * h - v);
+
+            float ndotL = std::max(l.z, 0.0f);
+            float ndotH = std::max(h.z, 0.0f);
+            float vdotH = std::max(glm::dot(v, h), 0.0f);
+            if (ndotL > 0.0f)
+                {
+                    float g = GeometrySmith(roughness, ndotV, ndotL);
+                    float gVis = (g * vdotH) / std::max(ndotH * ndotV, 1.0e-5f);
+                    float fc = std::pow(1.0f - vdotH, 5.0f);
+                    a += (1.0f - fc) * gVis;
+                    b += fc * gVis;
+                }
+        }
+
+    const float scale = 1.0f / static_cast<float>(sampleCount);
+    return {a * scale, b * scale};
+}
+
+std::shared_ptr<Image> BuildDefaultBrdfLut()
+{
+    constexpr int size = 128;
+    auto* data = new unsigned char[size * size * 4];
+    for (int y = 0; y < size; ++y)
+        {
+            for (int x = 0; x < size; ++x)
+                {
+                    float ndotV = (static_cast<float>(x) + 0.5f) /
+                                  static_cast<float>(size);
+                    float roughness = (static_cast<float>(y) + 0.5f) /
+                                      static_cast<float>(size);
+                    glm::vec2 brdf = IntegrateBrdf(ndotV, roughness);
+                    const int idx = (y * size + x) * 4;
+                    data[idx + 0] = static_cast<unsigned char>(
+                        std::clamp(brdf.x, 0.0f, 1.0f) * 255.0f);
+                    data[idx + 1] = static_cast<unsigned char>(
+                        std::clamp(brdf.y, 0.0f, 1.0f) * 255.0f);
+                    data[idx + 2] = 0;
+                    data[idx + 3] = 255;
+                }
+        }
+    return std::make_shared<Image>(size, size, 4, data);
+}
+} // namespace
 
 Renderer::Renderer(std::shared_ptr<Window> pWnd)
     : FrameChain(std::move(pWnd))
@@ -40,6 +154,23 @@ Renderer::Renderer(std::shared_ptr<Window> pWnd)
     shadowDirectionalShader_ = CreateShaderFromFiles(
         "../../shaders/ShadowDirectional.vs",
         "../../shaders/ShadowDirectional.frag");
+    {
+        auto pixel = std::shared_ptr<Image>(
+            new Image(1, 1, 4, new unsigned char[4] {196, 208, 224, 255}));
+        defaultEnvironmentTex_ =
+            std::shared_ptr<Texture>(meshFactory_->CreateTexture(pixel.get()));
+        environmentTex_ = defaultEnvironmentTex_;
+        defaultIrradianceTex_ = defaultEnvironmentTex_;
+        irradianceTex_ = defaultIrradianceTex_;
+        defaultPrefilteredEnvironmentTex_ = defaultEnvironmentTex_;
+        prefilteredEnvironmentTex_ = defaultPrefilteredEnvironmentTex_;
+    }
+    {
+        auto brdfLut = BuildDefaultBrdfLut();
+        defaultBrdfLutTex_ =
+            std::shared_ptr<Texture>(meshFactory_->CreateTexture(brdfLut.get()));
+        brdfLutTex_ = defaultBrdfLutTex_;
+    }
 
     createDescriptorSetLayout();
     createShadowPipeline();
@@ -123,6 +254,159 @@ void Renderer::SetShadowsEnabled(bool enabled)
 bool Renderer::IsShadowsEnabled() const
 {
     return shadowsEnabled_;
+}
+
+void Renderer::SetPbrDebugView(PbrDebugView view)
+{
+    pbrDebugView_ = view;
+}
+
+PbrDebugView Renderer::GetPbrDebugView() const
+{
+    return pbrDebugView_;
+}
+
+void Renderer::SetPbrEnvironmentSettings(const PbrEnvironmentSettings& settings)
+{
+    pbrEnvironmentSettings_ = settings;
+}
+
+const PbrEnvironmentSettings& Renderer::GetPbrEnvironmentSettings() const
+{
+    return pbrEnvironmentSettings_;
+}
+
+bool Renderer::LoadEnvironmentTexture(std::string_view path)
+{
+    if (path.empty())
+        return false;
+
+    auto image = ImageLoader::LoadTexture(std::string(path).c_str());
+    if (!image || image->empty())
+        return false;
+
+    environmentTex_ =
+        std::shared_ptr<Texture>(meshFactory_->CreateTexture(image.get()));
+    environmentTexturePath_ = path;
+    updateGlobalPbrDescriptors();
+    return true;
+}
+
+void Renderer::ClearEnvironmentTexture()
+{
+    environmentTex_ = defaultEnvironmentTex_;
+    environmentTexturePath_.clear();
+    updateGlobalPbrDescriptors();
+}
+
+bool Renderer::HasEnvironmentTexture() const
+{
+    return environmentTex_ && environmentTex_ != defaultEnvironmentTex_;
+}
+
+std::string_view Renderer::GetEnvironmentTexturePath() const
+{
+    return environmentTexturePath_;
+}
+
+bool Renderer::LoadIrradianceTexture(std::string_view path)
+{
+    if (path.empty())
+        return false;
+
+    auto image = ImageLoader::LoadTexture(std::string(path).c_str());
+    if (!image || image->empty())
+        return false;
+
+    irradianceTex_ =
+        std::shared_ptr<Texture>(meshFactory_->CreateTexture(image.get()));
+    irradianceTexturePath_ = path;
+    updateGlobalPbrDescriptors();
+    return true;
+}
+
+void Renderer::ClearIrradianceTexture()
+{
+    irradianceTex_ = defaultIrradianceTex_;
+    irradianceTexturePath_.clear();
+    updateGlobalPbrDescriptors();
+}
+
+bool Renderer::HasIrradianceTexture() const
+{
+    return irradianceTex_ && irradianceTex_ != defaultIrradianceTex_;
+}
+
+std::string_view Renderer::GetIrradianceTexturePath() const
+{
+    return irradianceTexturePath_;
+}
+
+bool Renderer::LoadPrefilteredEnvironmentTexture(std::string_view path)
+{
+    if (path.empty())
+        return false;
+
+    auto image = ImageLoader::LoadTexture(std::string(path).c_str());
+    if (!image || image->empty())
+        return false;
+
+    prefilteredEnvironmentTex_ =
+        std::shared_ptr<Texture>(meshFactory_->CreateTexture(image.get()));
+    prefilteredEnvironmentTexturePath_ = path;
+    updateGlobalPbrDescriptors();
+    return true;
+}
+
+void Renderer::ClearPrefilteredEnvironmentTexture()
+{
+    prefilteredEnvironmentTex_ = defaultPrefilteredEnvironmentTex_;
+    prefilteredEnvironmentTexturePath_.clear();
+    updateGlobalPbrDescriptors();
+}
+
+bool Renderer::HasPrefilteredEnvironmentTexture() const
+{
+    return prefilteredEnvironmentTex_ &&
+           prefilteredEnvironmentTex_ != defaultPrefilteredEnvironmentTex_;
+}
+
+std::string_view Renderer::GetPrefilteredEnvironmentTexturePath() const
+{
+    return prefilteredEnvironmentTexturePath_;
+}
+
+bool Renderer::LoadBrdfLutTexture(std::string_view path)
+{
+    if (path.empty())
+        return false;
+
+    auto image = ImageLoader::LoadTexture(std::string(path).c_str());
+    if (!image || image->empty())
+        return false;
+
+    brdfLutTex_ =
+        std::shared_ptr<Texture>(meshFactory_->CreateTexture(image.get()));
+    brdfLutTexturePath_ = path;
+    updateGlobalPbrDescriptors();
+    return true;
+}
+
+void Renderer::ClearBrdfLutTexture()
+{
+    brdfLutTex_ = defaultBrdfLutTex_;
+    brdfLutTexturePath_.clear();
+    updateGlobalPbrDescriptors();
+}
+
+bool Renderer::HasBrdfLutTexture() const
+{
+    return brdfLutTex_ && brdfLutTex_ != defaultBrdfLutTex_;
+}
+
+std::string_view Renderer::GetBrdfLutTexturePath() const
+{
+    return brdfLutTexturePath_;
 }
 
 const std::vector<std::shared_ptr<Multor::BLight> >& Renderer::GetLights() const
@@ -674,6 +958,13 @@ void Renderer::createUniformBuffers()
         lightsUbo_->buffers_.push_back(
             meshFactory_->CreateUniformBuffer(LightsUBO::LightsBufObj));
 
+    renderOptionsUbo_ = std::make_unique<RenderOptionsUBO>(device);
+    renderOptionsUbo_->buffers_.clear();
+    renderOptionsUbo_->buffers_.reserve(swapChainImages_.size());
+    for (size_t i = 0; i < swapChainImages_.size(); ++i)
+        renderOptionsUbo_->buffers_.push_back(
+            meshFactory_->CreateUniformBuffer(RenderOptionsUBO::BufObj));
+
     directionalShadowUboBuffers_.clear();
     directionalShadowUboBuffers_.reserve(swapChainImages_.size());
     for (size_t i = 0; i < swapChainImages_.size(); ++i)
@@ -761,6 +1052,9 @@ void Renderer::updateMats(uint32_t currentImage)
                                       ->bufferMemory_);
                 }
         }
+    if (renderOptionsUbo_)
+    renderOptionsUbo_->update(currentImage, pbrDebugView_,
+                              pbrEnvironmentSettings_);
 
     for (auto& mesh : meshes_)
         {
@@ -866,6 +1160,16 @@ void Renderer::createDescriptorSets()
                                             bufferInfo.range =
                                                 TransformUBO::MatBufObj;
                                         }
+                                    else if (layout.binding == 15 &&
+                                             renderOptionsUbo_ &&
+                                             i < renderOptionsUbo_->buffers_.size())
+                                        {
+                                            bufferInfo.buffer =
+                                                renderOptionsUbo_->buffers_[i]
+                                                    ->buffer_;
+                                            bufferInfo.range =
+                                                RenderOptionsUBO::BufObj;
+                                        }
                                     else
                                         {
                                             throw std::runtime_error(
@@ -928,7 +1232,7 @@ void Renderer::createDescriptorSets()
                                                 pointShadowMaps_.sampler_;
                                         }
                                     else if (layout.binding >= 9 &&
-                                             layout.binding <= 14)
+                                             layout.binding <= 19)
                                         {
                                             std::shared_ptr<Texture> tex;
                                             switch (layout.binding)
@@ -950,6 +1254,26 @@ void Renderer::createDescriptorSets()
                                                     break;
                                                 case 14:
                                                     tex = mesh->emissiveTex_;
+                                                    break;
+                                                case 16:
+                                                    tex = environmentTex_
+                                                              ? environmentTex_
+                                                              : defaultEnvironmentTex_;
+                                                    break;
+                                                case 17:
+                                                    tex = brdfLutTex_
+                                                              ? brdfLutTex_
+                                                              : defaultBrdfLutTex_;
+                                                    break;
+                                                case 18:
+                                                    tex = irradianceTex_
+                                                              ? irradianceTex_
+                                                              : defaultIrradianceTex_;
+                                                    break;
+                                                case 19:
+                                                    tex = prefilteredEnvironmentTex_
+                                                              ? prefilteredEnvironmentTex_
+                                                              : defaultPrefilteredEnvironmentTex_;
                                                     break;
                                                 default:
                                                     break;
@@ -982,6 +1306,152 @@ void Renderer::createDescriptorSets()
                     vkUpdateDescriptorSets(
                         device, static_cast<uint32_t>(descriptorWrites.size()),
                         descriptorWrites.data(), 0, nullptr);
+                }
+        }
+}
+
+void Renderer::updateGlobalPbrDescriptors()
+{
+    const auto hasBinding16 = std::any_of(
+        activeShader_->GetLayoutBindings()->begin(),
+        activeShader_->GetLayoutBindings()->end(),
+        [](const VkDescriptorSetLayoutBinding& binding)
+        { return binding.binding == 16 &&
+                 binding.descriptorType ==
+                     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; });
+    const auto hasBinding17 = std::any_of(
+        activeShader_->GetLayoutBindings()->begin(),
+        activeShader_->GetLayoutBindings()->end(),
+        [](const VkDescriptorSetLayoutBinding& binding)
+        { return binding.binding == 17 &&
+                 binding.descriptorType ==
+                     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; });
+    const auto hasBinding18 = std::any_of(
+        activeShader_->GetLayoutBindings()->begin(),
+        activeShader_->GetLayoutBindings()->end(),
+        [](const VkDescriptorSetLayoutBinding& binding)
+        { return binding.binding == 18 &&
+                 binding.descriptorType ==
+                     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; });
+    const auto hasBinding19 = std::any_of(
+        activeShader_->GetLayoutBindings()->begin(),
+        activeShader_->GetLayoutBindings()->end(),
+        [](const VkDescriptorSetLayoutBinding& binding)
+        { return binding.binding == 19 &&
+                 binding.descriptorType ==
+                     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; });
+    if (!hasBinding16 && !hasBinding17 && !hasBinding18 && !hasBinding19)
+        return;
+
+    auto envTex = environmentTex_ ? environmentTex_ : defaultEnvironmentTex_;
+    auto brdfTex = brdfLutTex_ ? brdfLutTex_ : defaultBrdfLutTex_;
+    auto irrTex = irradianceTex_ ? irradianceTex_ : defaultIrradianceTex_;
+    auto prefilteredTex = prefilteredEnvironmentTex_
+                              ? prefilteredEnvironmentTex_
+                              : defaultPrefilteredEnvironmentTex_;
+    if ((hasBinding16 && !envTex) || (hasBinding17 && !brdfTex) ||
+        (hasBinding18 && !irrTex) || (hasBinding19 && !prefilteredTex))
+        return;
+
+    for (auto& mesh : meshes_)
+        {
+            if (!mesh || !mesh->sh_)
+                continue;
+            for (auto descriptorSet : mesh->sh_->desSet_)
+                {
+                    std::vector<VkWriteDescriptorSet> writes;
+                    std::vector<VkDescriptorImageInfo> infos;
+                    writes.reserve(4);
+                    infos.reserve(4);
+
+                    if (hasBinding16)
+                        {
+                            VkDescriptorImageInfo info {};
+                            info.sampler = envTex->sampler_;
+                            info.imageView = envTex->view_;
+                            info.imageLayout =
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                            infos.push_back(info);
+                            writes.push_back({
+                                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                nullptr,
+                                descriptorSet,
+                                16,
+                                0,
+                                1,
+                                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                &infos.back(),
+                                nullptr,
+                                nullptr});
+                        }
+
+                    if (hasBinding17)
+                        {
+                            VkDescriptorImageInfo info {};
+                            info.sampler = brdfTex->sampler_;
+                            info.imageView = brdfTex->view_;
+                            info.imageLayout =
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                            infos.push_back(info);
+                            writes.push_back({
+                                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                nullptr,
+                                descriptorSet,
+                                17,
+                                0,
+                                1,
+                                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                &infos.back(),
+                                nullptr,
+                                nullptr});
+                        }
+
+                    if (hasBinding18)
+                        {
+                            VkDescriptorImageInfo info {};
+                            info.sampler = irrTex->sampler_;
+                            info.imageView = irrTex->view_;
+                            info.imageLayout =
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                            infos.push_back(info);
+                            writes.push_back({
+                                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                nullptr,
+                                descriptorSet,
+                                18,
+                                0,
+                                1,
+                                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                &infos.back(),
+                                nullptr,
+                                nullptr});
+                        }
+
+                    if (hasBinding19)
+                        {
+                            VkDescriptorImageInfo info {};
+                            info.sampler = prefilteredTex->sampler_;
+                            info.imageView = prefilteredTex->view_;
+                            info.imageLayout =
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                            infos.push_back(info);
+                            writes.push_back({
+                                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                nullptr,
+                                descriptorSet,
+                                19,
+                                0,
+                                1,
+                                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                &infos.back(),
+                                nullptr,
+                                nullptr});
+                        }
+
+                    if (!writes.empty())
+                        vkUpdateDescriptorSets(
+                            device, static_cast<uint32_t>(writes.size()),
+                            writes.data(), 0, nullptr);
                 }
         }
 }

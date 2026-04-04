@@ -64,7 +64,8 @@ Texture* TextureFactory::CreateTexture(Image* img)
 {
     //std::shared_ptr<Image> img = ImageLoader::LoadTexture("A:/VulkanEngine/build/matrix.jpg");
 
-    if (img->empty())
+    if (img == nullptr || img->empty() || img->mdata_ == nullptr ||
+        img->w_ <= 0 || img->h_ <= 0)
         throw std::runtime_error("failed to image load!");
 
     VkDeviceSize imageSize = img->w_ * img->h_ * 4;

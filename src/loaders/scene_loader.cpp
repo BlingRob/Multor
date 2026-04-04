@@ -25,6 +25,43 @@ void collectNodeMeshes(const std::shared_ptr<Node>& node, Model& model)
     for (auto it = children.first; it != children.second; ++it)
         collectNodeMeshes(*it, model);
 }
+
+const std::vector<std::string>& CandidateNames(Texture_Types type)
+{
+    static const std::vector<std::string> normalNames = {
+        "normal.png", "normal.jpg", "normal.jpeg", "normal-ogl.png",
+        "normal-ogl.jpg", "normal_gl.png", "normal_gl.jpg"};
+    static const std::vector<std::string> metallicNames = {
+        "metallic.png", "metallic.jpg", "metalness.png", "metalness.jpg"};
+    static const std::vector<std::string> roughnessNames = {
+        "roughness.png", "roughness.jpg"};
+    static const std::vector<std::string> aoNames = {
+        "ao.png", "ao.jpg", "ambientocclusion.png", "ambient_occlusion.png"};
+    static const std::vector<std::string> emissiveNames = {
+        "emissive.png", "emissive.jpg", "emission.png", "emission.jpg"};
+    static const std::vector<std::string> packedNames = {
+        "metallicroughness.png", "metallic_roughness.png", "orm.png",
+        "occlusionroughnessmetallic.png"};
+
+    switch (type)
+        {
+        case Texture_Types::Normal:
+            return normalNames;
+        case Texture_Types::Metallic:
+            return metallicNames;
+        case Texture_Types::Roughness:
+            return roughnessNames;
+        case Texture_Types::Ambient_occlusion:
+            return aoNames;
+        case Texture_Types::Emissive:
+            return emissiveNames;
+        case Texture_Types::Metallic_roughness:
+            return packedNames;
+        default:
+            static const std::vector<std::string> emptyNames;
+            return emptyNames;
+        }
+}
 } // namespace
 
 SceneLoader::SceneLoader() = default;
@@ -333,6 +370,8 @@ std::shared_ptr<BaseMesh> SceneLoader::processMesh(aiMesh* mesh)
                         out->GetMaterial()->metallicFactor,
                         out->GetMaterial()->roughnessFactor);
                 }
+
+            applyHeuristicPbrTextures(*out);
         }
 
     return out;
@@ -497,6 +536,99 @@ SceneLoader::processTextures(aiMaterial* src, aiTextureType type,
         }
 
     return result;
+}
+
+std::shared_ptr<BaseTexture>
+SceneLoader::loadTextureFromPath(const std::filesystem::path& path,
+                                 Texture_Types targetType)
+{
+    if (path.empty() || !std::filesystem::exists(path))
+        return nullptr;
+
+    const std::string resolvedPath = path.string();
+    const std::size_t hashKey =
+        std::hash<std::string> {}(resolvedPath + "#" +
+                                  std::to_string(static_cast<int>(targetType)));
+
+    auto cacheIt = textureCache_.find(hashKey);
+    if (cacheIt != textureCache_.end())
+        {
+            if (auto cached = cacheIt->second.lock())
+                return cached;
+        }
+
+    auto image = ImageLoader::LoadTexture(resolvedPath.c_str());
+    if (!image || image->empty())
+        return nullptr;
+
+    auto texture = std::make_shared<BaseTexture>(
+        path.filename().string(), resolvedPath, targetType,
+        std::vector<std::shared_ptr<Image> > {image});
+    textureCache_[hashKey] = texture;
+    return texture;
+}
+
+void SceneLoader::applyHeuristicPbrTextures(BaseMesh& mesh)
+{
+    auto* material = mesh.GetMaterial();
+    if (!material)
+        return;
+
+    std::filesystem::path probeDir;
+    if (auto base = mesh.FindTexture(Texture_Types::Diffuse))
+        {
+            const auto basePath = std::filesystem::path(base->GetPath());
+            if (basePath.has_parent_path())
+                probeDir = basePath.parent_path();
+        }
+
+    if (probeDir.empty() && !sceneDir_.empty())
+        probeDir = std::filesystem::path(sceneDir_);
+    if (probeDir.empty() || !std::filesystem::exists(probeDir))
+        return;
+
+    auto tryAttach = [this, &mesh, material, &probeDir](Texture_Types type)
+    {
+        if (mesh.FindTexture(type))
+            return false;
+
+        for (const auto& name : CandidateNames(type))
+            {
+                auto tex = loadTextureFromPath(probeDir / name, type);
+                if (!tex)
+                    continue;
+                mesh.AddTexture(tex);
+                material->UseMetallicRoughnessPBR(material->baseColorFactor,
+                                                  material->metallicFactor,
+                                                  material->roughnessFactor);
+                return true;
+            }
+        return false;
+    };
+
+    const bool hasMetallic = mesh.FindTexture(Texture_Types::Metallic) != nullptr;
+    const bool hasRoughness = mesh.FindTexture(Texture_Types::Roughness) != nullptr;
+    if (!hasMetallic && !hasRoughness)
+        {
+            for (const auto& name : CandidateNames(Texture_Types::Metallic_roughness))
+                {
+                    auto tex = loadTextureFromPath(probeDir / name,
+                                                   Texture_Types::Metallic_roughness);
+                    if (!tex)
+                        continue;
+                    mesh.AddTexture(tex);
+                    material->UseMetallicRoughnessPBR(material->baseColorFactor,
+                                                      material->metallicFactor,
+                                                      material->roughnessFactor);
+                    break;
+                }
+        }
+
+    tryAttach(Texture_Types::Normal);
+    tryAttach(Texture_Types::Metallic);
+    tryAttach(Texture_Types::Roughness);
+    tryAttach(Texture_Types::Ambient_occlusion);
+    tryAttach(Texture_Types::Emissive);
 }
 
 } // namespace Multor

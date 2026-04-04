@@ -64,11 +64,18 @@ private:
     bool showStatsWindow_ = true;
     bool showCameraWindow_ = true;
     bool showLightsWindow_ = true;
+    bool showMaterialsWindow_ = true;
     bool showDebugWindow_ = true;
     bool showOpenSceneWindow_ = false;
+    bool showPbrEnvironmentWindow_ = false;
     std::function<bool(const std::string&)> openSceneCallback_;
     std::array<char, 512> openScenePath_ {};
+    std::array<char, 512> environmentPath_ {};
+    std::array<char, 512> irradiancePath_ {};
+    std::array<char, 512> prefilteredEnvironmentPath_ {};
+    std::array<char, 512> brdfLutPath_ {};
     std::string openSceneStatus_;
+    std::string environmentStatus_;
 };
 
 } // namespace Multor

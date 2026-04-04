@@ -11,6 +11,11 @@ namespace Multor::Vulkan
 {
 namespace
 {
+constexpr float kDirectionalDepthBiasConstant = 2.5f;
+constexpr float kDirectionalDepthBiasSlope    = 10.0f;
+constexpr float kPointDepthBiasConstant       = 1.1f;
+constexpr float kPointDepthBiasSlope          = 4.0f;
+
 bool hasStencilComponentShadow(VkFormat format)
 {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
@@ -138,8 +143,8 @@ void ShadowRenderer::RecreateDirectionalPipeline(
     rasterizer.cullMode                = VK_CULL_MODE_FRONT_BIT;
     rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
     rasterizer.depthBiasEnable         = VK_TRUE;
-    rasterizer.depthBiasConstantFactor = 2.5f;
-    rasterizer.depthBiasSlopeFactor    = 10.0f;
+    rasterizer.depthBiasConstantFactor = 0.0f;
+    rasterizer.depthBiasSlopeFactor    = 0.0f;
     rasterizer.depthBiasClamp          = 0.0f;
 
     VkPipelineMultisampleStateCreateInfo multisampling {};
@@ -155,10 +160,11 @@ void ShadowRenderer::RecreateDirectionalPipeline(
     depthStencil.stencilTestEnable     = VK_FALSE;
 
     VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                      VK_DYNAMIC_STATE_SCISSOR};
+                                      VK_DYNAMIC_STATE_SCISSOR,
+                                      VK_DYNAMIC_STATE_DEPTH_BIAS};
     VkPipelineDynamicStateCreateInfo dynamicState {};
     dynamicState.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = 2;
+    dynamicState.dynamicStateCount = 3;
     dynamicState.pDynamicStates    = dynamicStates;
 
     VkPushConstantRange pushConstant {};
@@ -335,6 +341,8 @@ VkCommandBuffer ShadowRenderer::BuildShadowCommandBufferAll(
                                       directionalPipeline_);
                     vkCmdSetViewport(cmd, 0, 1, &viewport);
                     vkCmdSetScissor(cmd, 0, 1, &scissor);
+                    vkCmdSetDepthBias(cmd, kDirectionalDepthBiasConstant, 0.0f,
+                                      kDirectionalDepthBiasSlope);
 
                     VkDeviceSize offsets[] = {0};
                     for (auto& mesh : meshes)
@@ -406,6 +414,8 @@ VkCommandBuffer ShadowRenderer::BuildShadowCommandBufferAll(
                                               directionalPipeline_);
                             vkCmdSetViewport(cmd, 0, 1, &viewport);
                             vkCmdSetScissor(cmd, 0, 1, &scissor);
+                            vkCmdSetDepthBias(cmd, kPointDepthBiasConstant, 0.0f,
+                                              kPointDepthBiasSlope);
 
                             VkDeviceSize offsets[] = {0};
                             for (auto& mesh : meshes)
@@ -536,6 +546,8 @@ void ShadowRenderer::DrawDirectional(const std::list<std::shared_ptr<Mesh> >& me
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, directionalPipeline_);
             vkCmdSetViewport(cmd, 0, 1, &viewport);
             vkCmdSetScissor(cmd, 0, 1, &scissor);
+            vkCmdSetDepthBias(cmd, kDirectionalDepthBiasConstant, 0.0f,
+                              kDirectionalDepthBiasSlope);
 
             VkDeviceSize offsets[] = {0};
             for (auto& mesh : meshes)
@@ -623,6 +635,8 @@ void ShadowRenderer::DrawPoint(const std::list<std::shared_ptr<Mesh> >& meshes,
                     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, directionalPipeline_);
                     vkCmdSetViewport(cmd, 0, 1, &viewport);
                     vkCmdSetScissor(cmd, 0, 1, &scissor);
+                    vkCmdSetDepthBias(cmd, kPointDepthBiasConstant, 0.0f,
+                                      kPointDepthBiasSlope);
 
                     VkDeviceSize offsets[] = {0};
                     for (auto& mesh : meshes)

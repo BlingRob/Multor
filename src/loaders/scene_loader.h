@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <filesystem>
 #include <vector>
 
 #include <assimp/Importer.hpp>
@@ -54,6 +55,9 @@ private:
     std::unique_ptr<Material> processMaterial(aiMaterial* src);
     std::vector<std::shared_ptr<BaseTexture> >
     processTextures(aiMaterial* src, aiTextureType type, Texture_Types targetType);
+    std::shared_ptr<BaseTexture> loadTextureFromPath(const std::filesystem::path& path,
+                                                     Texture_Types targetType);
+    void applyHeuristicPbrTextures(BaseMesh& mesh);
 
 private:
     Assimp::Importer importer_;

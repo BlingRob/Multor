@@ -8,6 +8,7 @@
 #include "objects/buffer.h"
 #include "syncer.h"
 #include "structures/light_ubo.h"
+#include "structures/render_options_ubo.h"
 #include "structures/shadow_ubo.h"
 #include "shadow_resources.h"
 #include "shadow_pass.h"
@@ -47,6 +48,26 @@ public:
     bool IsLightingEnabled() const;
     void SetShadowsEnabled(bool enabled);
     bool IsShadowsEnabled() const;
+    void SetPbrDebugView(PbrDebugView view);
+    PbrDebugView GetPbrDebugView() const;
+    void SetPbrEnvironmentSettings(const PbrEnvironmentSettings& settings);
+    const PbrEnvironmentSettings& GetPbrEnvironmentSettings() const;
+    bool LoadEnvironmentTexture(std::string_view path);
+    void ClearEnvironmentTexture();
+    bool HasEnvironmentTexture() const;
+    std::string_view GetEnvironmentTexturePath() const;
+    bool LoadIrradianceTexture(std::string_view path);
+    void ClearIrradianceTexture();
+    bool HasIrradianceTexture() const;
+    std::string_view GetIrradianceTexturePath() const;
+    bool LoadPrefilteredEnvironmentTexture(std::string_view path);
+    void ClearPrefilteredEnvironmentTexture();
+    bool HasPrefilteredEnvironmentTexture() const;
+    std::string_view GetPrefilteredEnvironmentTexturePath() const;
+    bool LoadBrdfLutTexture(std::string_view path);
+    void ClearBrdfLutTexture();
+    bool HasBrdfLutTexture() const;
+    std::string_view GetBrdfLutTexturePath() const;
     const std::vector<std::shared_ptr<Multor::BLight> >& GetLights() const;
     std::shared_ptr<ShaderLayout>
     CreateShaderFromSource(std::string_view vertex, std::string_view fragment,
@@ -82,6 +103,7 @@ private:
     void createDescriptorSetLayout();
     void createDescriptorPool();
     void createDescriptorSets();
+    void updateGlobalPbrDescriptors();
     void createUniformBuffers();
     void createSyncObjects();
     void recordCommandBuffer(uint32_t index);
@@ -120,10 +142,25 @@ private:
     bool shadowMapsDirty_ = true;
     bool lightingEnabled_ = true;
     bool shadowsEnabled_ = true;
+    PbrDebugView pbrDebugView_ = PbrDebugView::Shaded;
+    PbrEnvironmentSettings pbrEnvironmentSettings_ {};
 
     std::list<std::shared_ptr<Mesh> > meshes_;
     std::vector<std::shared_ptr<Multor::BLight> > lights_;
+    std::shared_ptr<Texture> environmentTex_;
+    std::shared_ptr<Texture> defaultEnvironmentTex_;
+    std::shared_ptr<Texture> irradianceTex_;
+    std::shared_ptr<Texture> defaultIrradianceTex_;
+    std::shared_ptr<Texture> prefilteredEnvironmentTex_;
+    std::shared_ptr<Texture> defaultPrefilteredEnvironmentTex_;
+    std::shared_ptr<Texture> brdfLutTex_;
+    std::shared_ptr<Texture> defaultBrdfLutTex_;
+    std::string environmentTexturePath_;
+    std::string irradianceTexturePath_;
+    std::string prefilteredEnvironmentTexturePath_;
+    std::string brdfLutTexturePath_;
     std::unique_ptr<LightsUBO> lightsUbo_;
+    std::unique_ptr<RenderOptionsUBO> renderOptionsUbo_;
     std::vector<std::unique_ptr<Buffer> > directionalShadowUboBuffers_;
     std::vector<std::unique_ptr<Buffer> > pointShadowUboBuffers_;
     std::unique_ptr<ShadowResources> shadowResources_;

@@ -17,6 +17,7 @@
 #include "configure.h"
 
 #include <array>
+#include <memory>
 #include <functional>
 #include <string>
 #include <vector>
@@ -74,6 +75,7 @@ private:
     struct SceneMeshBinding
     {
         std::weak_ptr<Node> node_;
+        std::weak_ptr<BaseMesh> sourceMesh_;
         std::shared_ptr<Vulkan::Mesh> vkMesh_;
     };
     std::vector<SceneMeshBinding> sceneMeshBindings_;

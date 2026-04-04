@@ -3,6 +3,7 @@
 #include "application.h"
 
 #include "configure.h"
+#include "vulkan/structures/material_ubo.h"
 
 #include <filesystem>
 #include <algorithm>
@@ -155,11 +156,13 @@ void Application::SyncSceneToRenderer()
             pRenderer_->AddLight(it->second);
 
     std::vector<std::shared_ptr<Node> > sceneNodesForMeshes;
+    std::vector<std::shared_ptr<BaseMesh> > sourceMeshesForBindings;
     std::vector<std::unique_ptr<BaseMesh> > meshClones;
 
     auto models = pScene_->GetModels();
     std::function<void(const std::shared_ptr<Node>&)> collectNodeBindings;
     collectNodeBindings = [this, &collectNodeBindings, &sceneNodesForMeshes,
+                           &sourceMeshesForBindings,
                            &meshClones](const std::shared_ptr<Node>& node)
     {
         if (!node)
@@ -174,6 +177,7 @@ void Application::SyncSceneToRenderer()
                 if (!clone)
                     continue;
                 sceneNodesForMeshes.push_back(node);
+                sourceMeshesForBindings.push_back(*mit);
                 meshClones.push_back(std::move(clone));
             }
 
@@ -204,7 +208,8 @@ void Application::SyncSceneToRenderer()
     for (std::size_t i = 0; i < bindCount; ++i)
         {
             if (sceneNodesForMeshes[i] && vkMeshes[i])
-                sceneMeshBindings_.push_back({sceneNodesForMeshes[i], vkMeshes[i]});
+                sceneMeshBindings_.push_back(
+                    {sceneNodesForMeshes[i], sourceMeshesForBindings[i], vkMeshes[i]});
         }
 }
 
@@ -217,9 +222,17 @@ void Application::UpdateSceneBindings()
     for (auto& binding : sceneMeshBindings_)
         {
             auto node = binding.node_.lock();
-            if (!node || !binding.vkMesh_ || !binding.vkMesh_->tr_)
+            auto srcMesh = binding.sourceMesh_.lock();
+            if (!node || !srcMesh || !binding.vkMesh_ || !binding.vkMesh_->tr_)
                 continue;
             binding.vkMesh_->tr_->updateModel(frame, node->GetTransform());
+            if (auto* material = srcMesh->GetMaterial())
+                {
+                    binding.vkMesh_->materialData_ =
+                        Vulkan::UBOs::PackMaterial(*material, srcMesh.get());
+                    binding.vkMesh_->tr_->updateMaterial(
+                        frame, binding.vkMesh_->materialData_);
+                }
         }
 }
 

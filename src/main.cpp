@@ -439,6 +439,21 @@ int main(int argc, char* args[])
                     glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.25f, 0.0f)));
                 scene->AddNode(sphereNode);
 
+                auto metalSphereNode = std::make_shared<Node>();
+                metalSphereNode->SetName("shadow_demo_metal_sphere");
+                auto metalSphereMesh = buildSphereMesh(sphereAlbedoTex, 0.8f);
+                metalSphereMesh->AddTexture(sphereNormalTex);
+                metalSphereMesh->AddTexture(sphereMetallicTex);
+                metalSphereMesh->AddTexture(sphereRoughnessTex);
+                metalSphereMesh->AddTexture(sphereAoTex);
+                if (auto* mat = metalSphereMesh->GetMaterial())
+                    mat->UseMetallicRoughnessPBR(
+                        glm::vec4(1.0f, 0.92f, 0.8f, 1.0f), 0.85f, 0.18f);
+                metalSphereNode->addMesh(metalSphereMesh);
+                metalSphereNode->SetLocalTransform(
+                    glm::translate(glm::mat4(1.0f), glm::vec3(-2.1f, -0.2f, 1.2f)));
+                scene->AddNode(metalSphereNode);
+
                 auto pointLight = std::make_shared<PointLight>(
                     glm::vec3(0.06f, 0.06f, 0.06f),
                     glm::vec3(2.4f, 2.2f, 2.0f),
@@ -489,6 +504,9 @@ int main(int argc, char* args[])
             if (!loadedScene)
                 {
                     app.SetScene(buildPointShadowDemoScene());
+                    app.GetRenderer()->LoadEnvironmentTexture("./Res/matrix.jpg");
+                    app.GetRenderer()->LoadIrradianceTexture("./Res/matrix.jpg");
+                    app.GetRenderer()->LoadPrefilteredEnvironmentTexture("./Res/matrix.jpg");
                     if (auto scene = app.GetScene())
                         {
                             if (auto controller = scene->GetController())

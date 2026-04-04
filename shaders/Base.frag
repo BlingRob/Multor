@@ -76,6 +76,13 @@ layout(set = 0, binding = 8) uniform MaterialData
     vec4 phong;
 } materialData;
 
+layout(set = 0, binding = 15) uniform RenderOptions
+{
+    ivec4 options;
+    vec4 pbrEnvironment;
+    vec4 pbrEnvironment2;
+} renderOptions;
+
 layout(set = 0, binding = 3) uniform sampler2D diffuse;
 layout(set = 0, binding = 5) uniform sampler2DArrayShadow dirShadowMaps;
 layout(set = 0, binding = 7) uniform samplerCubeArrayShadow pointShadowMaps;
@@ -85,6 +92,10 @@ layout(set = 0, binding = 11) uniform sampler2D metallicMap;
 layout(set = 0, binding = 12) uniform sampler2D roughnessMap;
 layout(set = 0, binding = 13) uniform sampler2D aoMap;
 layout(set = 0, binding = 14) uniform sampler2D emissiveMap;
+layout(set = 0, binding = 16) uniform sampler2D environmentMap;
+layout(set = 0, binding = 17) uniform sampler2D brdfLutMap;
+layout(set = 0, binding = 18) uniform sampler2D irradianceMap;
+layout(set = 0, binding = 19) uniform sampler2D prefilteredEnvironmentMap;
 
 layout(location = 0) out vec4 FragColor;
 layout(location = 0) in VS_OUT vs_out;
@@ -229,6 +240,62 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+vec2 directionToEquirectUv(vec3 dir)
+{
+    dir = normalize(dir);
+    float u = atan(dir.z, dir.x) / (2.0 * PI) + 0.5;
+    float v = 0.5 - asin(clamp(dir.y, -1.0, 1.0)) / PI;
+    return vec2(u, v);
+}
+
+vec3 samplePrefilteredEnvironment(vec3 reflectionDir, vec3 N, float roughness)
+{
+    vec3 R = normalize(reflectionDir);
+    vec3 up = abs(R.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent = normalize(cross(up, R));
+    vec3 bitangent = normalize(cross(R, tangent));
+
+    float blurStrength = max(renderOptions.pbrEnvironment2.x, 0.0);
+    float sampleRadius = mix(0.0, 0.12 * blurStrength, roughness * roughness);
+    float centerWeight = mix(1.6, 0.45, roughness);
+    float ringWeight = mix(0.15, 1.0, roughness);
+
+    vec3 accum = texture(prefilteredEnvironmentMap, directionToEquirectUv(R)).rgb *
+                 centerWeight;
+    float totalWeight = centerWeight;
+
+    if (sampleRadius > 1.0e-5)
+    {
+        vec3 dirs[4] = {
+            normalize(R + tangent * sampleRadius),
+            normalize(R - tangent * sampleRadius),
+            normalize(R + bitangent * sampleRadius),
+            normalize(R - bitangent * sampleRadius)};
+
+        for (int i = 0; i < 4; ++i)
+        {
+            float nd = max(dot(N, dirs[i]), 0.0);
+            float weight = ringWeight * mix(0.35, 1.0, nd);
+            accum += texture(prefilteredEnvironmentMap,
+                             directionToEquirectUv(dirs[i])).rgb *
+                     weight;
+            totalWeight += weight;
+        }
+    }
+
+    return accum / max(totalWeight, 1.0e-5);
+}
+
+vec3 approxEnvironmentSpecularFactor(vec3 N, vec3 V, vec3 F0, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    vec2 brdf = texture(brdfLutMap, vec2(NdotV, roughness)).rg;
+    vec3 spec = F0 * brdf.x + brdf.y;
+    spec *= renderOptions.pbrEnvironment.z;
+    spec *= renderOptions.pbrEnvironment.y * renderOptions.pbrEnvironment.w;
+    return spec;
+}
+
 void main()
 {
     vec3 N = getNormal();
@@ -361,6 +428,8 @@ void main()
     }
 
     vec3 finalColor;
+    vec3 debugEnvDiffuse = vec3(0.0);
+    vec3 debugEnvSpecular = vec3(0.0);
     if (!usePBR)
     {
         lighting = max(lighting, vec3(0.05));
@@ -368,7 +437,53 @@ void main()
     }
     else
     {
+        vec3 kSView = fresnelSchlick(max(dot(N, V), 0.0), F0);
+        vec3 kDView = (vec3(1.0) - kSView) * (1.0 - metallic);
+        vec3 envDiffuseColor =
+            texture(irradianceMap, directionToEquirectUv(N)).rgb;
+        vec3 R = reflect(-V, N);
+        vec3 envSpecDir = normalize(mix(R, N, roughness * roughness * 0.35));
+        vec3 envSpecularColor =
+            samplePrefilteredEnvironment(envSpecDir, N, roughness);
+        vec3 ambientDiffuse = kDView * baseColor * envDiffuseColor * ao *
+                              renderOptions.pbrEnvironment.x;
+        vec3 ambientSpecular =
+            approxEnvironmentSpecularFactor(N, V, F0, roughness) *
+            envSpecularColor * ao;
+        debugEnvDiffuse = ambientDiffuse;
+        debugEnvSpecular = ambientSpecular;
         finalColor = lighting + emissive;
+        finalColor += ambientDiffuse + ambientSpecular;
+    }
+
+    switch (renderOptions.options.x)
+    {
+        case 1:
+            finalColor = baseColor;
+            break;
+        case 2:
+            finalColor = N * 0.5 + 0.5;
+            break;
+        case 3:
+            finalColor = vec3(metallic);
+            break;
+        case 4:
+            finalColor = vec3(roughness);
+            break;
+        case 5:
+            finalColor = vec3(ao);
+            break;
+        case 6:
+            finalColor = emissive;
+            break;
+        case 7:
+            finalColor = debugEnvDiffuse;
+            break;
+        case 8:
+            finalColor = debugEnvSpecular;
+            break;
+        default:
+            break;
     }
 
     FragColor = vec4(finalColor, sampledBaseColor.a);

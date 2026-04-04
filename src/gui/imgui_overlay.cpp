@@ -18,6 +18,32 @@ namespace Multor
 
 namespace
 {
+const char* PbrDebugViewName(Multor::Vulkan::PbrDebugView view)
+{
+    switch (view)
+        {
+        case Multor::Vulkan::PbrDebugView::BaseColor:
+            return "Base Color";
+        case Multor::Vulkan::PbrDebugView::Normal:
+            return "Normal";
+        case Multor::Vulkan::PbrDebugView::Metallic:
+            return "Metallic";
+        case Multor::Vulkan::PbrDebugView::Roughness:
+            return "Roughness";
+        case Multor::Vulkan::PbrDebugView::AO:
+            return "AO";
+        case Multor::Vulkan::PbrDebugView::Emissive:
+            return "Emissive";
+        case Multor::Vulkan::PbrDebugView::EnvDiffuse:
+            return "Env Diffuse";
+        case Multor::Vulkan::PbrDebugView::EnvSpecular:
+            return "Env Specular";
+        case Multor::Vulkan::PbrDebugView::Shaded:
+        default:
+            return "Shaded";
+        }
+}
+
 const char* LightTypeName(Multor::LightType type)
 {
     switch (type)
@@ -40,6 +66,135 @@ bool EditVec3(const char* label, glm::vec3& v, float speed = 0.05f)
         return false;
     v = glm::vec3(vals[0], vals[1], vals[2]);
     return true;
+}
+
+bool EditVec4(const char* label, glm::vec4& v)
+{
+    float vals[4] = {v.x, v.y, v.z, v.w};
+    if (!ImGui::ColorEdit4(label, vals))
+        return false;
+    v = glm::vec4(vals[0], vals[1], vals[2], vals[3]);
+    return true;
+}
+
+bool DrawPbrEnvironmentEditor(Multor::Vulkan::PbrEnvironmentSettings& settings,
+                              std::string_view suffix = {})
+{
+    const std::string suffixStr(suffix);
+    bool changed = false;
+    changed |= ImGui::SliderFloat(("Ambient Diffuse##" + suffixStr).c_str(),
+                                  &settings.diffuseAmbientIntensity_, 0.0f, 1.5f);
+    changed |= ImGui::SliderFloat(("Ambient Specular##" + suffixStr).c_str(),
+                                  &settings.specularAmbientIntensity_, 0.0f, 2.0f);
+    changed |= ImGui::SliderFloat(("Env Fresnel##" + suffixStr).c_str(),
+                                  &settings.envFresnelStrength_, 0.0f, 2.0f);
+    changed |= ImGui::SliderFloat(("Env Reflection##" + suffixStr).c_str(),
+                                  &settings.envReflectionPower_, 0.0f, 2.0f);
+    changed |= ImGui::SliderFloat(
+        ("Roughness Blur##" + suffixStr).c_str(),
+        &settings.roughnessAwareBlurStrength_, 0.0f, 3.0f);
+    return changed;
+}
+
+void DrawMaterialEditorForNode(const std::shared_ptr<Node>& node, bool& materialsChanged)
+{
+    if (!node)
+        return;
+
+    auto meshes = node->GetMeshes();
+    int meshIdx = 0;
+    for (auto it = meshes.first; it != meshes.second; ++it, ++meshIdx)
+        {
+            auto mesh = *it;
+            if (!mesh || !mesh->GetMaterial())
+                continue;
+
+            auto* material = mesh->GetMaterial();
+            const std::string meshLabel =
+                (mesh->GetName().empty() ? std::string("Mesh") : std::string(mesh->GetName())) +
+                "##mat_" + std::string(node->GetName()) + "_" + std::to_string(meshIdx);
+
+            if (!ImGui::TreeNode(meshLabel.c_str()))
+                continue;
+
+            bool usePbr = material->IsPBR();
+            if (ImGui::Checkbox(("Use PBR##" + meshLabel).c_str(), &usePbr))
+                {
+                    if (usePbr)
+                        material->UseMetallicRoughnessPBR(material->baseColorFactor,
+                                                          material->metallicFactor,
+                                                          material->roughnessFactor);
+                    else
+                        material->UseLegacyPhong();
+                    materialsChanged = true;
+                }
+
+            if (usePbr)
+                {
+                    glm::vec4 baseColor = material->baseColorFactor;
+                    if (EditVec4(("Base Color##" + meshLabel).c_str(), baseColor))
+                        {
+                            material->baseColorFactor = baseColor;
+                            materialsChanged = true;
+                        }
+                    if (ImGui::SliderFloat(("Metallic##" + meshLabel).c_str(),
+                                           &material->metallicFactor, 0.0f, 1.0f))
+                        materialsChanged = true;
+                    if (ImGui::SliderFloat(("Roughness##" + meshLabel).c_str(),
+                                           &material->roughnessFactor, 0.02f, 1.0f))
+                        materialsChanged = true;
+                    if (ImGui::SliderFloat(("Normal Scale##" + meshLabel).c_str(),
+                                           &material->normalScale, 0.0f, 3.0f))
+                        materialsChanged = true;
+                    if (ImGui::SliderFloat(("AO Strength##" + meshLabel).c_str(),
+                                           &material->aoStrength, 0.0f, 2.0f))
+                        materialsChanged = true;
+                    glm::vec3 emissive = material->emissiveFactor;
+                    if (ImGui::ColorEdit3(("Emissive##" + meshLabel).c_str(), &emissive.x))
+                        {
+                            material->emissiveFactor = emissive;
+                            materialsChanged = true;
+                        }
+                }
+            else
+                {
+                    glm::vec3 ambient = material->ambient;
+                    glm::vec3 diffuse = material->diffuse;
+                    glm::vec3 specular = material->specular;
+                    if (ImGui::ColorEdit3(("Ambient##" + meshLabel).c_str(), &ambient.x))
+                        {
+                            material->ambient = ambient;
+                            materialsChanged = true;
+                        }
+                    if (ImGui::ColorEdit3(("Diffuse##" + meshLabel).c_str(), &diffuse.x))
+                        {
+                            material->diffuse = diffuse;
+                            materialsChanged = true;
+                        }
+                    if (ImGui::ColorEdit3(("Specular##" + meshLabel).c_str(), &specular.x))
+                        {
+                            material->specular = specular;
+                            materialsChanged = true;
+                        }
+                    if (ImGui::SliderFloat(("Shininess##" + meshLabel).c_str(),
+                                           &material->shininess, 1.0f, 128.0f))
+                        materialsChanged = true;
+                }
+
+            ImGui::TextDisabled("Textures");
+            ImGui::BulletText("BaseColor: %s", mesh->FindTexture(Texture_Types::Diffuse) ? "yes" : "no");
+            ImGui::BulletText("Normal: %s", mesh->FindTexture(Texture_Types::Normal) ? "yes" : "no");
+            ImGui::BulletText("Metallic: %s", mesh->FindTexture(Texture_Types::Metallic) ? "yes" : "no");
+            ImGui::BulletText("Roughness: %s", mesh->FindTexture(Texture_Types::Roughness) ? "yes" : "no");
+            ImGui::BulletText("AO: %s", mesh->FindTexture(Texture_Types::Ambient_occlusion) ? "yes" : "no");
+            ImGui::BulletText("Emissive: %s", mesh->FindTexture(Texture_Types::Emissive) ? "yes" : "no");
+
+            ImGui::TreePop();
+        }
+
+    auto children = node->GetChildren();
+    for (auto it = children.first; it != children.second; ++it)
+        DrawMaterialEditorForNode(*it, materialsChanged);
 }
 
 void DrawAxisGizmo(const Multor::Camera& cam)
@@ -294,7 +449,9 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                     ImGui::MenuItem("Stats", nullptr, &showStatsWindow_);
                     ImGui::MenuItem("Camera", nullptr, &showCameraWindow_);
                     ImGui::MenuItem("Lights", nullptr, &showLightsWindow_);
+                    ImGui::MenuItem("Materials", nullptr, &showMaterialsWindow_);
                     ImGui::MenuItem("Debug", nullptr, &showDebugWindow_);
+                    ImGui::MenuItem("PBR Env", nullptr, &showPbrEnvironmentWindow_);
                     ImGui::Separator();
                     ImGui::MenuItem("Axis Gizmo xOyOz", nullptr, &showAxisGizmo_);
                     ImGui::EndMenu();
@@ -368,6 +525,32 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                                 renderer->InvalidateShadows();
                             if (ImGui::MenuItem("Recreate Renderer Resources"))
                                 renderer->Update();
+
+                            ImGui::Separator();
+                            const Vulkan::PbrDebugView currentView = renderer->GetPbrDebugView();
+                            if (ImGui::BeginMenu("PBR Debug View"))
+                                {
+                                    for (int i = static_cast<int>(Vulkan::PbrDebugView::Shaded);
+                                         i <= static_cast<int>(Vulkan::PbrDebugView::EnvSpecular); ++i)
+                                        {
+                                            const auto view = static_cast<Vulkan::PbrDebugView>(i);
+                                            const bool selected = (view == currentView);
+                                            if (ImGui::MenuItem(PbrDebugViewName(view), nullptr, selected))
+                                                renderer->SetPbrDebugView(view);
+                                        }
+                                    ImGui::EndMenu();
+                                }
+
+                            ImGui::Separator();
+                            auto pbrSettings = renderer->GetPbrEnvironmentSettings();
+                            if (ImGui::BeginMenu("PBR Environment"))
+                                {
+                                    if (DrawPbrEnvironmentEditor(pbrSettings, "menu"))
+                                        renderer->SetPbrEnvironmentSettings(pbrSettings);
+                                    if (ImGui::MenuItem("Open Environment Window"))
+                                        showPbrEnvironmentWindow_ = true;
+                                    ImGui::EndMenu();
+                                }
                         }
                     ImGui::EndMenu();
                 }
@@ -432,6 +615,158 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
 
                     if (!openSceneStatus_.empty())
                         ImGui::TextWrapped("%s", openSceneStatus_.c_str());
+                }
+            ImGui::End();
+        }
+
+    if (showPbrEnvironmentWindow_)
+        {
+            if (ImGui::Begin("PBR Environment", &showPbrEnvironmentWindow_))
+                {
+                    if (renderer)
+                        {
+                            auto settings = renderer->GetPbrEnvironmentSettings();
+                            if (DrawPbrEnvironmentEditor(settings, "envwindow"))
+                                renderer->SetPbrEnvironmentSettings(settings);
+
+                            ImGui::Separator();
+                            if (environmentPath_[0] == '\0')
+                                std::snprintf(environmentPath_.data(),
+                                              environmentPath_.size(), "%s",
+                                              "../../Res/matrix.jpg");
+                            ImGui::InputText("Environment Path",
+                                             environmentPath_.data(),
+                                             environmentPath_.size());
+                            if (ImGui::Button("Load Environment"))
+                                {
+                                    if (renderer->LoadEnvironmentTexture(
+                                            std::string_view(
+                                                environmentPath_.data())))
+                                        environmentStatus_ =
+                                            "Environment texture loaded";
+                                    else
+                                        environmentStatus_ =
+                                            "Failed to load environment texture";
+                                }
+                            ImGui::SameLine();
+                            if (ImGui::Button("Clear Environment"))
+                                {
+                                    renderer->ClearEnvironmentTexture();
+                                    environmentStatus_ =
+                                        "Environment reset to neutral";
+                                }
+                            const std::string currentPath =
+                                renderer->HasEnvironmentTexture()
+                                    ? std::string(
+                                          renderer->GetEnvironmentTexturePath())
+                                    : std::string("generated neutral");
+                            ImGui::TextWrapped("Current: %s",
+                                               currentPath.c_str());
+                            if (!environmentStatus_.empty())
+                                ImGui::TextWrapped("%s",
+                                                   environmentStatus_.c_str());
+                            ImGui::Separator();
+                            if (irradiancePath_[0] == '\0')
+                                std::snprintf(irradiancePath_.data(),
+                                              irradiancePath_.size(), "%s",
+                                              "../../Res/matrix.jpg");
+                            ImGui::InputText("Irradiance Path",
+                                             irradiancePath_.data(),
+                                             irradiancePath_.size());
+                            if (ImGui::Button("Load Irradiance"))
+                                {
+                                    if (renderer->LoadIrradianceTexture(
+                                            std::string_view(
+                                                irradiancePath_.data())))
+                                        environmentStatus_ =
+                                            "Irradiance texture loaded";
+                                    else
+                                        environmentStatus_ =
+                                            "Failed to load irradiance texture";
+                                }
+                            ImGui::SameLine();
+                            if (ImGui::Button("Clear Irradiance"))
+                                {
+                                    renderer->ClearIrradianceTexture();
+                                    environmentStatus_ =
+                                        "Irradiance reset to default";
+                                }
+                            const std::string currentIrradiancePath =
+                                renderer->HasIrradianceTexture()
+                                    ? std::string(
+                                          renderer->GetIrradianceTexturePath())
+                                    : std::string("environment fallback");
+                            ImGui::TextWrapped("Irradiance: %s",
+                                               currentIrradiancePath.c_str());
+                            ImGui::Separator();
+                            if (prefilteredEnvironmentPath_[0] == '\0')
+                                std::snprintf(prefilteredEnvironmentPath_.data(),
+                                              prefilteredEnvironmentPath_.size(),
+                                              "%s", "../../Res/matrix.jpg");
+                            ImGui::InputText("Prefiltered Env Path",
+                                             prefilteredEnvironmentPath_.data(),
+                                             prefilteredEnvironmentPath_.size());
+                            if (ImGui::Button("Load Prefiltered Env"))
+                                {
+                                    if (renderer->LoadPrefilteredEnvironmentTexture(
+                                            std::string_view(
+                                                prefilteredEnvironmentPath_.data())))
+                                        environmentStatus_ =
+                                            "Prefiltered environment loaded";
+                                    else
+                                        environmentStatus_ =
+                                            "Failed to load prefiltered environment";
+                                }
+                            ImGui::SameLine();
+                            if (ImGui::Button("Clear Prefiltered Env"))
+                                {
+                                    renderer->ClearPrefilteredEnvironmentTexture();
+                                    environmentStatus_ =
+                                        "Prefiltered environment reset to default";
+                                }
+                            const std::string currentPrefilteredPath =
+                                renderer->HasPrefilteredEnvironmentTexture()
+                                    ? std::string(renderer
+                                                      ->GetPrefilteredEnvironmentTexturePath())
+                                    : std::string("environment fallback");
+                            ImGui::TextWrapped("Prefiltered: %s",
+                                               currentPrefilteredPath.c_str());
+                            ImGui::Separator();
+                            if (brdfLutPath_[0] == '\0')
+                                std::snprintf(brdfLutPath_.data(),
+                                              brdfLutPath_.size(), "%s",
+                                              "../../Res/brdf_lut.png");
+                            ImGui::InputText("BRDF LUT Path",
+                                             brdfLutPath_.data(),
+                                             brdfLutPath_.size());
+                            if (ImGui::Button("Load BRDF LUT"))
+                                {
+                                    if (renderer->LoadBrdfLutTexture(
+                                            std::string_view(brdfLutPath_.data())))
+                                        environmentStatus_ = "BRDF LUT loaded";
+                                    else
+                                        environmentStatus_ =
+                                            "Failed to load BRDF LUT";
+                                }
+                            ImGui::SameLine();
+                            if (ImGui::Button("Clear BRDF LUT"))
+                                {
+                                    renderer->ClearBrdfLutTexture();
+                                    environmentStatus_ =
+                                        "BRDF LUT reset to generated default";
+                                }
+                            const std::string currentBrdfLutPath =
+                                renderer->HasBrdfLutTexture()
+                                    ? std::string(
+                                          renderer->GetBrdfLutTexturePath())
+                                    : std::string("generated default");
+                            ImGui::TextWrapped("BRDF LUT: %s",
+                                               currentBrdfLutPath.c_str());
+                        }
+                    else
+                        {
+                            ImGui::TextDisabled("Renderer is not available");
+                        }
                 }
             ImGui::End();
         }
@@ -588,6 +923,65 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
             ImGui::End();
         }
 
+    if (showMaterialsWindow_ && scene)
+        {
+            bool materialsChanged = false;
+            if (ImGui::Begin("Materials", &showMaterialsWindow_))
+                {
+                    if (renderer)
+                        {
+                            int debugView = static_cast<int>(renderer->GetPbrDebugView());
+                            const char* debugItems[] = {
+                                "Shaded", "Base Color", "Normal", "Metallic",
+                                "Roughness", "AO", "Emissive",
+                                "Env Diffuse", "Env Specular"};
+                            if (ImGui::Combo("PBR Debug View", &debugView, debugItems,
+                                             IM_ARRAYSIZE(debugItems)))
+                                renderer->SetPbrDebugView(
+                                    static_cast<Vulkan::PbrDebugView>(debugView));
+                            auto pbrSettings = renderer->GetPbrEnvironmentSettings();
+                            if (DrawPbrEnvironmentEditor(pbrSettings, "materials"))
+                                renderer->SetPbrEnvironmentSettings(pbrSettings);
+                            ImGui::Separator();
+                        }
+
+                    auto nodes = scene->GetNodes();
+                    for (auto it = nodes.first; it != nodes.second; ++it)
+                        {
+                            const auto& node = it->second;
+                            if (!node)
+                                continue;
+                            const std::string nodeLabel =
+                                (node->GetName().empty() ? std::string("Node") : std::string(node->GetName())) +
+                                "##node_materials";
+                            if (ImGui::TreeNode(nodeLabel.c_str()))
+                                {
+                                    DrawMaterialEditorForNode(node, materialsChanged);
+                                    ImGui::TreePop();
+                                }
+                        }
+
+                    auto models = scene->GetModels();
+                    for (auto it = models.first; it != models.second; ++it)
+                        {
+                            const auto& model = it->second;
+                            if (!model || !model->GetRoot())
+                                continue;
+                            const std::string modelLabel =
+                                (model->GetName().empty() ? std::string("Model") : std::string(model->GetName())) +
+                                "##model_materials";
+                            if (ImGui::TreeNode(modelLabel.c_str()))
+                                {
+                                    DrawMaterialEditorForNode(model->GetRoot(), materialsChanged);
+                                    ImGui::TreePop();
+                                }
+                        }
+                }
+            ImGui::End();
+            if (renderer && materialsChanged)
+                renderer->InvalidateShadows();
+        }
+
     if (showDebugWindow_)
         {
             if (ImGui::Begin("Debug Actions", &showDebugWindow_))
@@ -601,6 +995,10 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             bool shadows = renderer->IsShadowsEnabled();
                             if (ImGui::Checkbox("Shadows Enabled", &shadows))
                                 renderer->SetShadowsEnabled(shadows);
+                            ImGui::Separator();
+                            auto pbrSettings = renderer->GetPbrEnvironmentSettings();
+                            if (DrawPbrEnvironmentEditor(pbrSettings, "debug"))
+                                renderer->SetPbrEnvironmentSettings(pbrSettings);
                         }
                     if (scene)
                         {
