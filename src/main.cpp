@@ -193,8 +193,8 @@ int main(int argc, char* args[])
             auto buildSphereMesh =
                 [](const std::shared_ptr<Multor::BaseTexture>& tex,
                    float radius = 1.0f,
-                   std::uint32_t stacks = 24,
-                   std::uint32_t slices = 32) -> std::shared_ptr<BaseMesh>
+                   std::uint32_t stacks = 48,
+                   std::uint32_t slices = 64) -> std::shared_ptr<BaseMesh>
             {
                 std::vector<float> positions;
                 std::vector<float> normals;
@@ -427,13 +427,16 @@ int main(int argc, char* args[])
 
                 auto sphereNode = std::make_shared<Node>();
                 sphereNode->SetName("shadow_demo_sphere");
-                auto sphereMesh = buildSphereMesh(sphereAlbedoTex, 1.0f);
+                auto sphereMesh = buildSphereMesh(sphereAlbedoTex, 1.0f, 72, 96);
                 sphereMesh->AddTexture(sphereNormalTex);
                 sphereMesh->AddTexture(sphereMetallicTex);
                 sphereMesh->AddTexture(sphereRoughnessTex);
                 sphereMesh->AddTexture(sphereAoTex);
                 if (auto* mat = sphereMesh->GetMaterial())
-                    mat->UseMetallicRoughnessPBR(glm::vec4(1.0f), 0.15f, 0.32f);
+                    {
+                        mat->UseMetallicRoughnessPBR(glm::vec4(1.0f), 0.15f, 0.32f);
+                        mat->normalScale = 0.25f;
+                    }
                 sphereNode->addMesh(sphereMesh);
                 sphereNode->SetLocalTransform(
                     glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.25f, 0.0f)));
@@ -441,7 +444,7 @@ int main(int argc, char* args[])
 
                 auto metalSphereNode = std::make_shared<Node>();
                 metalSphereNode->SetName("shadow_demo_metal_sphere");
-                auto metalSphereMesh = buildSphereMesh(sphereAlbedoTex, 0.8f);
+                auto metalSphereMesh = buildSphereMesh(sphereAlbedoTex, 0.8f, 72, 96);
                 metalSphereMesh->AddTexture(sphereNormalTex);
                 metalSphereMesh->AddTexture(sphereMetallicTex);
                 metalSphereMesh->AddTexture(sphereRoughnessTex);
@@ -449,6 +452,8 @@ int main(int argc, char* args[])
                 if (auto* mat = metalSphereMesh->GetMaterial())
                     mat->UseMetallicRoughnessPBR(
                         glm::vec4(1.0f, 0.92f, 0.8f, 1.0f), 0.85f, 0.18f);
+                if (auto* mat = metalSphereMesh->GetMaterial())
+                    mat->normalScale = 0.12f;
                 metalSphereNode->addMesh(metalSphereMesh);
                 metalSphereNode->SetLocalTransform(
                     glm::translate(glm::mat4(1.0f), glm::vec3(-2.1f, -0.2f, 1.2f)));

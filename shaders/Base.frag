@@ -256,9 +256,14 @@ vec3 samplePrefilteredEnvironment(vec3 reflectionDir, vec3 N, float roughness)
     vec3 bitangent = normalize(cross(R, tangent));
 
     float blurStrength = max(renderOptions.pbrEnvironment2.x, 0.0);
-    float sampleRadius = mix(0.0, 0.12 * blurStrength, roughness * roughness);
-    float centerWeight = mix(1.6, 0.45, roughness);
-    float ringWeight = mix(0.15, 1.0, roughness);
+    float sampleRadius = mix(0.0,
+                             0.12 * blurStrength *
+                                 max(renderOptions.pbrEnvironment2.y, 0.0),
+                             roughness * roughness);
+    float centerWeight = mix(1.6, 0.45, roughness) *
+                         max(renderOptions.pbrEnvironment2.z, 0.0);
+    float ringWeight = mix(0.15, 1.0, roughness) *
+                       max(renderOptions.pbrEnvironment2.w, 0.0);
 
     vec3 accum = texture(prefilteredEnvironmentMap, directionToEquirectUv(R)).rgb *
                  centerWeight;
@@ -266,18 +271,27 @@ vec3 samplePrefilteredEnvironment(vec3 reflectionDir, vec3 N, float roughness)
 
     if (sampleRadius > 1.0e-5)
     {
-        vec3 dirs[4] = {
-            normalize(R + tangent * sampleRadius),
-            normalize(R - tangent * sampleRadius),
-            normalize(R + bitangent * sampleRadius),
-            normalize(R - bitangent * sampleRadius)};
+        const float angles[8] = float[8](
+            0.0,
+            PI * 0.25,
+            PI * 0.5,
+            PI * 0.75,
+            PI,
+            PI * 1.25,
+            PI * 1.5,
+            PI * 1.75);
 
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 8; ++i)
         {
-            float nd = max(dot(N, dirs[i]), 0.0);
-            float weight = ringWeight * mix(0.35, 1.0, nd);
+            vec2 disk = vec2(cos(angles[i]), sin(angles[i]));
+            vec3 sampleDir = normalize(R +
+                                       tangent * (disk.x * sampleRadius) +
+                                       bitangent * (disk.y * sampleRadius));
+            float nd = max(dot(N, sampleDir), 0.0);
+            float angularWeight = 0.85 + 0.15 * abs(disk.x);
+            float weight = ringWeight * angularWeight * mix(0.35, 1.0, nd);
             accum += texture(prefilteredEnvironmentMap,
-                             directionToEquirectUv(dirs[i])).rgb *
+                             directionToEquirectUv(sampleDir)).rgb *
                      weight;
             totalWeight += weight;
         }
@@ -298,7 +312,11 @@ vec3 approxEnvironmentSpecularFactor(vec3 N, vec3 V, vec3 F0, float roughness)
 
 void main()
 {
+    vec3 geomN = normalize(vs_out.Normal);
     vec3 N = getNormal();
+    vec3 geomT = normalize(vs_out.Tangent);
+    vec3 geomB = normalize(vs_out.Bitangent);
+    vec3 directN = (renderOptions.options.z != 0) ? N : geomN;
     vec3 V = normalize(cameraData.viewPos.xyz - vs_out.FragPos);
     bool usePBR = materialData.textureFlags0.x == 1;
 
@@ -385,11 +403,11 @@ void main()
 
         float shadowFactor = 1.0;
         if (lightType == 1 || lightType == 3)
-            shadowFactor = calcDirectionalShadow(sceneLights.lights[i].meta.y, N, L);
+            shadowFactor = calcDirectionalShadow(sceneLights.lights[i].meta.y, directN, L);
         else if (lightType == 2)
-            shadowFactor = calcPointShadow(sceneLights.lights[i].meta.y, N, L);
+            shadowFactor = calcPointShadow(sceneLights.lights[i].meta.y, directN, L);
 
-        float NdotL = max(dot(N, L), 0.0);
+        float NdotL = max(dot(directN, L), 0.0);
         if (NdotL <= 0.0)
         {
             lighting += sceneLights.lights[i].ambient.rgb * baseColor * attenuation;
@@ -400,7 +418,7 @@ void main()
         {
             vec3 amb = sceneLights.lights[i].ambient.rgb;
             vec3 dif = sceneLights.lights[i].diffuse.rgb * NdotL;
-            vec3 R = reflect(-L, N);
+            vec3 R = reflect(-L, directN);
             float specPow = max(materialData.phong.x, 16.0);
             float specTerm = pow(max(dot(V, R), 0.0), specPow);
             vec3 spec = sceneLights.lights[i].specular.rgb * specTerm;
@@ -410,12 +428,12 @@ void main()
 
         vec3 H = normalize(V + L);
         vec3 radiance = sceneLights.lights[i].diffuse.rgb * attenuation;
-        float NDF = DistributionGGX(N, H, roughness);
-        float G = GeometrySmith(N, V, L, roughness);
+        float NDF = DistributionGGX(directN, H, roughness);
+        float G = GeometrySmith(directN, V, L, roughness);
         vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
         vec3 numerator = NDF * G * F;
-        float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL;
+        float denominator = 4.0 * max(dot(directN, V), 0.0) * NdotL;
         vec3 specular = numerator / max(denominator, 0.0001);
 
         vec3 kS = F;
@@ -437,18 +455,19 @@ void main()
     }
     else
     {
+        vec3 envN = (renderOptions.options.y != 0) ? geomN : N;
         vec3 kSView = fresnelSchlick(max(dot(N, V), 0.0), F0);
         vec3 kDView = (vec3(1.0) - kSView) * (1.0 - metallic);
         vec3 envDiffuseColor =
-            texture(irradianceMap, directionToEquirectUv(N)).rgb;
-        vec3 R = reflect(-V, N);
-        vec3 envSpecDir = normalize(mix(R, N, roughness * roughness * 0.35));
+            texture(irradianceMap, directionToEquirectUv(envN)).rgb;
+        vec3 R = reflect(-V, envN);
+        vec3 envSpecDir = normalize(mix(R, envN, roughness * roughness * 0.35));
         vec3 envSpecularColor =
-            samplePrefilteredEnvironment(envSpecDir, N, roughness);
+            samplePrefilteredEnvironment(envSpecDir, envN, roughness);
         vec3 ambientDiffuse = kDView * baseColor * envDiffuseColor * ao *
                               renderOptions.pbrEnvironment.x;
         vec3 ambientSpecular =
-            approxEnvironmentSpecularFactor(N, V, F0, roughness) *
+            approxEnvironmentSpecularFactor(envN, V, F0, roughness) *
             envSpecularColor * ao;
         debugEnvDiffuse = ambientDiffuse;
         debugEnvSpecular = ambientSpecular;
@@ -481,6 +500,18 @@ void main()
             break;
         case 8:
             finalColor = debugEnvSpecular;
+            break;
+        case 9:
+            finalColor = geomN * 0.5 + 0.5;
+            break;
+        case 10:
+            finalColor = geomT * 0.5 + 0.5;
+            break;
+        case 11:
+            finalColor = geomB * 0.5 + 0.5;
+            break;
+        case 12:
+            finalColor = abs(N - geomN);
             break;
         default:
             break;

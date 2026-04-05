@@ -20,7 +20,14 @@ void RenderOptionsUBO::update(std::size_t frame, PbrDebugView debugView,
         pbrEnvironment.envFresnelStrength_,
         pbrEnvironment.envReflectionPower_);
     options.pbrEnvironment2_ = glm::vec4(
-        pbrEnvironment.roughnessAwareBlurStrength_, 0.0f, 0.0f, 0.0f);
+        pbrEnvironment.roughnessAwareBlurStrength_,
+        pbrEnvironment.prefilterSampleRadiusScale_,
+        pbrEnvironment.prefilterCenterWeightScale_,
+        pbrEnvironment.prefilterRingWeightScale_);
+    options.options_.y =
+        pbrEnvironment.envSpecularUsesGeometricNormal_ >= 0.5f ? 1 : 0;
+    options.options_.z =
+        pbrEnvironment.directLightingUsesNormalMap_ >= 0.5f ? 1 : 0;
 
     void* data = nullptr;
     vkMapMemory(dev_, buffers_[frame]->bufferMemory_, 0, BufObj, 0, &data);

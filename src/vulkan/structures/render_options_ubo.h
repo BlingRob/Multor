@@ -21,7 +21,11 @@ enum class PbrDebugView : int
     AO = 5,
     Emissive = 6,
     EnvDiffuse = 7,
-    EnvSpecular = 8
+    EnvSpecular = 8,
+    GeomNormal = 9,
+    Tangent = 10,
+    Bitangent = 11,
+    NormalDelta = 12
 };
 
 struct PbrEnvironmentSettings
@@ -31,6 +35,11 @@ struct PbrEnvironmentSettings
     float envFresnelStrength_ = 1.0f;
     float envReflectionPower_ = 1.0f;
     float roughnessAwareBlurStrength_ = 1.0f;
+    float prefilterSampleRadiusScale_ = 1.0f;
+    float prefilterCenterWeightScale_ = 1.0f;
+    float prefilterRingWeightScale_ = 1.0f;
+    float envSpecularUsesGeometricNormal_ = 1.0f;
+    float directLightingUsesNormalMap_ = 1.0f;
 };
 
 namespace UBOs

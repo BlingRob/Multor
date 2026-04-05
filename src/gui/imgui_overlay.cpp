@@ -38,6 +38,14 @@ const char* PbrDebugViewName(Multor::Vulkan::PbrDebugView view)
             return "Env Diffuse";
         case Multor::Vulkan::PbrDebugView::EnvSpecular:
             return "Env Specular";
+        case Multor::Vulkan::PbrDebugView::GeomNormal:
+            return "Geom Normal";
+        case Multor::Vulkan::PbrDebugView::Tangent:
+            return "Tangent";
+        case Multor::Vulkan::PbrDebugView::Bitangent:
+            return "Bitangent";
+        case Multor::Vulkan::PbrDebugView::NormalDelta:
+            return "Normal Delta";
         case Multor::Vulkan::PbrDebugView::Shaded:
         default:
             return "Shaded";
@@ -93,7 +101,55 @@ bool DrawPbrEnvironmentEditor(Multor::Vulkan::PbrEnvironmentSettings& settings,
     changed |= ImGui::SliderFloat(
         ("Roughness Blur##" + suffixStr).c_str(),
         &settings.roughnessAwareBlurStrength_, 0.0f, 3.0f);
+    changed |= ImGui::SliderFloat(
+        ("Prefilter Radius##" + suffixStr).c_str(),
+        &settings.prefilterSampleRadiusScale_, 0.0f, 3.0f);
+    changed |= ImGui::SliderFloat(
+        ("Center Weight##" + suffixStr).c_str(),
+        &settings.prefilterCenterWeightScale_, 0.1f, 3.0f);
+    changed |= ImGui::SliderFloat(
+        ("Ring Weight##" + suffixStr).c_str(),
+        &settings.prefilterRingWeightScale_, 0.0f, 3.0f);
+    bool envUsesGeomNormal = settings.envSpecularUsesGeometricNormal_ >= 0.5f;
+    if (ImGui::Checkbox(("Env Uses Geom Normal##" + suffixStr).c_str(),
+                        &envUsesGeomNormal))
+        {
+            settings.envSpecularUsesGeometricNormal_ =
+                envUsesGeomNormal ? 1.0f : 0.0f;
+            changed = true;
+        }
+    bool directUsesNormalMap = settings.directLightingUsesNormalMap_ >= 0.5f;
+    if (ImGui::Checkbox(("Direct Uses Normal Map##" + suffixStr).c_str(),
+                        &directUsesNormalMap))
+        {
+            settings.directLightingUsesNormalMap_ =
+                directUsesNormalMap ? 1.0f : 0.0f;
+            changed = true;
+        }
     return changed;
+}
+
+bool DrawNodeMaterialNormalScale(const std::shared_ptr<Node>& node,
+                                 const char* label, float minValue = 0.0f,
+                                 float maxValue = 3.0f)
+{
+    if (!node)
+        return false;
+
+    auto meshes = node->GetMeshes();
+    for (auto it = meshes.first; it != meshes.second; ++it)
+        {
+            auto mesh = *it;
+            if (!mesh || !mesh->GetMaterial())
+                continue;
+
+            auto* material = mesh->GetMaterial();
+            if (ImGui::SliderFloat(label, &material->normalScale, minValue,
+                                   maxValue))
+                return true;
+            break;
+        }
+    return false;
 }
 
 void DrawMaterialEditorForNode(const std::shared_ptr<Node>& node, bool& materialsChanged)
@@ -531,7 +587,7 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             if (ImGui::BeginMenu("PBR Debug View"))
                                 {
                                     for (int i = static_cast<int>(Vulkan::PbrDebugView::Shaded);
-                                         i <= static_cast<int>(Vulkan::PbrDebugView::EnvSpecular); ++i)
+                                         i <= static_cast<int>(Vulkan::PbrDebugView::NormalDelta); ++i)
                                         {
                                             const auto view = static_cast<Vulkan::PbrDebugView>(i);
                                             const bool selected = (view == currentView);
@@ -628,6 +684,27 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             auto settings = renderer->GetPbrEnvironmentSettings();
                             if (DrawPbrEnvironmentEditor(settings, "envwindow"))
                                 renderer->SetPbrEnvironmentSettings(settings);
+
+                            if (scene)
+                                {
+                                    bool demoNormalsChanged = false;
+                                    ImGui::Separator();
+                                    ImGui::TextDisabled("Demo Spheres");
+                                    if (auto node =
+                                            scene->GetNode("shadow_demo_sphere"))
+                                        demoNormalsChanged |=
+                                            DrawNodeMaterialNormalScale(
+                                                node,
+                                                "Primary Sphere Normal");
+                                    if (auto node = scene->GetNode(
+                                            "shadow_demo_metal_sphere"))
+                                        demoNormalsChanged |=
+                                            DrawNodeMaterialNormalScale(
+                                                node,
+                                                "Metal Sphere Normal");
+                                    if (demoNormalsChanged)
+                                        renderer->InvalidateShadows();
+                                }
 
                             ImGui::Separator();
                             if (environmentPath_[0] == '\0')
@@ -934,7 +1011,9 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             const char* debugItems[] = {
                                 "Shaded", "Base Color", "Normal", "Metallic",
                                 "Roughness", "AO", "Emissive",
-                                "Env Diffuse", "Env Specular"};
+                                "Env Diffuse", "Env Specular",
+                                "Geom Normal", "Tangent",
+                                "Bitangent", "Normal Delta"};
                             if (ImGui::Combo("PBR Debug View", &debugView, debugItems,
                                              IM_ARRAYSIZE(debugItems)))
                                 renderer->SetPbrDebugView(
