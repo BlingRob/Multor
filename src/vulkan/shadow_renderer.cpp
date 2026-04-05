@@ -349,6 +349,8 @@ VkCommandBuffer ShadowRenderer::BuildShadowCommandBufferAll(
                         {
                             if (!mesh || !mesh->tr_ || mesh->tr_->modelCache_.empty())
                                 continue;
+                            if (!mesh->castsShadows_)
+                                continue;
 
                             const std::size_t modelIdx = std::min<std::size_t>(
                                 frameIndex, mesh->tr_->modelCache_.size() - 1);
@@ -422,6 +424,8 @@ VkCommandBuffer ShadowRenderer::BuildShadowCommandBufferAll(
                                 {
                                     if (!mesh || !mesh->tr_ ||
                                         mesh->tr_->modelCache_.empty())
+                                        continue;
+                                    if (!mesh->castsShadows_)
                                         continue;
 
                                     const std::size_t modelIdx = std::min<std::size_t>(
@@ -554,6 +558,8 @@ void ShadowRenderer::DrawDirectional(const std::list<std::shared_ptr<Mesh> >& me
                 {
                     if (!mesh || !mesh->tr_ || mesh->tr_->modelCache_.empty())
                         continue;
+                    if (!mesh->castsShadows_)
+                        continue;
 
                     const std::size_t modelIdx = std::min<std::size_t>(
                         frameIndex, mesh->tr_->modelCache_.size() - 1);
@@ -642,6 +648,8 @@ void ShadowRenderer::DrawPoint(const std::list<std::shared_ptr<Mesh> >& meshes,
                     for (auto& mesh : meshes)
                         {
                             if (!mesh || !mesh->tr_ || mesh->tr_->modelCache_.empty())
+                                continue;
+                            if (!mesh->castsShadows_)
                                 continue;
 
                             const std::size_t modelIdx = std::min<std::size_t>(

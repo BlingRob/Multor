@@ -117,7 +117,7 @@ float calcDirectionalShadow(int lightSlot, vec3 normal, vec3 lightDir)
             return 1.0;
 
         float ndotl = max(dot(normal, lightDir), 0.0);
-        float bias = max(0.0015 * (1.0 - ndotl), 0.00035);
+        float bias = max(0.0025 * (1.0 - ndotl), 0.00075);
         vec2 texelSize = 1.0 / vec2(textureSize(dirShadowMaps, 0).xy);
         float visibility = 0.0;
         for (int x = -1; x <= 1; ++x)
@@ -130,7 +130,7 @@ float calcDirectionalShadow(int lightSlot, vec3 normal, vec3 lightDir)
                                            clamp(proj.z - bias, 0.0, 1.0)));
             }
         }
-        return visibility / 9.0;
+        return max(visibility / 9.0, 0.32);
     }
     return 1.0;
 }
@@ -155,7 +155,7 @@ float calcPointShadow(int lightSlot, vec3 normal, vec3 lightDir)
         vec3 lightPos = pointShadows.entries[i].lightPosFar.xyz;
         float farPlane = max(pointShadows.entries[i].lightPosFar.w, 0.0001);
         float lightDistance = length(lightPos - vs_out.FragPos);
-        float normalOffset = mix(0.02, 0.06, clamp(lightDistance / farPlane, 0.0, 1.0));
+        float normalOffset = mix(0.045, 0.11, clamp(lightDistance / farPlane, 0.0, 1.0));
         vec3 samplePos = vs_out.FragPos + normal * normalOffset;
         vec3 fragToLight = samplePos - lightPos;
         if (length(fragToLight) < 1e-5)
@@ -169,15 +169,15 @@ float calcPointShadow(int lightSlot, vec3 normal, vec3 lightDir)
         vec3 proj = lightClip.xyz / lightClip.w;
         float compareDepth = proj.z * 0.5 + 0.5;
         float ndotl = max(dot(normal, lightDir), 0.0);
-        float distanceBias = 0.002 * clamp(lightDistance / farPlane, 0.0, 1.0);
-        float bias = max(0.01 * (1.0 - ndotl), 0.0035) + distanceBias;
+        float distanceBias = 0.004 * clamp(lightDistance / farPlane, 0.0, 1.0);
+        float bias = max(0.02 * (1.0 - ndotl), 0.008) + distanceBias;
         float refDepth = clamp(compareDepth - bias, 0.0, 1.0);
 
         vec3 dir = normalize(fragToLight);
         vec3 tangent = normalize(abs(dir.y) < 0.99 ? cross(dir, vec3(0.0, 1.0, 0.0))
                                                    : cross(dir, vec3(1.0, 0.0, 0.0)));
         vec3 bitangent = normalize(cross(dir, tangent));
-        float spread = 0.004;
+        float spread = mix(0.003, 0.009, clamp(lightDistance / farPlane, 0.0, 1.0));
 
         float visibility = 0.0;
         visibility += texture(pointShadowMaps, vec4(normalize(dir), float(pointShadows.entries[i].meta.x)), refDepth);
@@ -185,7 +185,7 @@ float calcPointShadow(int lightSlot, vec3 normal, vec3 lightDir)
         visibility += texture(pointShadowMaps, vec4(normalize(dir - tangent * spread), float(pointShadows.entries[i].meta.x)), refDepth);
         visibility += texture(pointShadowMaps, vec4(normalize(dir + bitangent * spread), float(pointShadows.entries[i].meta.x)), refDepth);
         visibility += texture(pointShadowMaps, vec4(normalize(dir - bitangent * spread), float(pointShadows.entries[i].meta.x)), refDepth);
-        return visibility / 5.0;
+        return max(visibility / 5.0, 0.4);
     }
     return 1.0;
 }
@@ -317,6 +317,7 @@ void main()
     vec3 geomT = normalize(vs_out.Tangent);
     vec3 geomB = normalize(vs_out.Bitangent);
     vec3 directN = (renderOptions.options.z != 0) ? N : geomN;
+    vec3 shadowN = geomN;
     vec3 V = normalize(cameraData.viewPos.xyz - vs_out.FragPos);
     bool usePBR = materialData.textureFlags0.x == 1;
 
@@ -403,9 +404,10 @@ void main()
 
         float shadowFactor = 1.0;
         if (lightType == 1 || lightType == 3)
-            shadowFactor = calcDirectionalShadow(sceneLights.lights[i].meta.y, directN, L);
+            shadowFactor = calcDirectionalShadow(sceneLights.lights[i].meta.y, shadowN, L);
         else if (lightType == 2)
-            shadowFactor = calcPointShadow(sceneLights.lights[i].meta.y, directN, L);
+            shadowFactor = calcPointShadow(sceneLights.lights[i].meta.y, shadowN, L);
+        shadowFactor = mix(1.0, shadowFactor, 0.65);
 
         float NdotL = max(dot(directN, L), 0.0);
         if (NdotL <= 0.0)

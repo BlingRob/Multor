@@ -44,6 +44,7 @@ MeshFactory::CreateMesh(std::unique_ptr<BaseMesh> mesh)
     vk_mesh->materialData_ =
         mesh->GetMaterial() ? UBOs::PackMaterial(*mesh->GetMaterial(), mesh.get())
                             : UBOs::PackMaterial(Material {});
+    vk_mesh->castsShadows_ = mesh->CastsShadows();
 
     for (const auto& tex : {vk_mesh->baseColorTex_, vk_mesh->normalTex_,
                             vk_mesh->metallicTex_, vk_mesh->roughnessTex_,

@@ -60,6 +60,16 @@ std::shared_ptr<BaseTexture> BaseMesh::FindTexture(Texture_Types type) const
     return nullptr;
 }
 
+void BaseMesh::SetCastsShadows(bool castsShadows)
+{
+    castsShadows_ = castsShadows;
+}
+
+bool BaseMesh::CastsShadows() const
+{
+    return castsShadows_;
+}
+
 std::unique_ptr<BaseMesh> BaseMesh::Clone() const
 {
     std::unique_ptr<Vertexes> vertsClone =
@@ -74,6 +84,7 @@ std::unique_ptr<BaseMesh> BaseMesh::Clone() const
                                           std::move(matClone),
                                           std::move(texClones));
     out->SetName(GetName());
+    out->SetCastsShadows(CastsShadows());
     return out;
 }
 

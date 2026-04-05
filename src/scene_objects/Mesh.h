@@ -32,6 +32,8 @@ public:
     void AddTexture(std::shared_ptr<BaseTexture> tex);
     std::shared_ptr<BaseTexture> FindTexture(Texture_Types type) const;
     std::unique_ptr<BaseMesh> Clone() const;
+    void SetCastsShadows(bool castsShadows);
+    bool CastsShadows() const;
     //
     Vertexes*               GetVertexes();
     Material*               GetMaterial();
@@ -48,6 +50,7 @@ protected:
     std::unique_ptr<Material> material_;
     /* Textures */
     std::vector<std::shared_ptr<BaseTexture> > textures_;
+    bool castsShadows_ {true};
 };
 
 } // namespace Multor

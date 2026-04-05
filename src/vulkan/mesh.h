@@ -29,6 +29,7 @@ struct Mesh
     std::shared_ptr<Texture> aoTex_;
     std::shared_ptr<Texture> emissiveTex_;
     UBOs::MaterialData materialData_ {};
+    bool castsShadows_ {true};
     
     /*  Dynamic object  */
     std::shared_ptr<Shader> sh_;

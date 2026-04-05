@@ -472,6 +472,7 @@ int main(int argc, char* args[])
                 auto lightMarkerNode = std::make_shared<Node>();
                 lightMarkerNode->SetName("shadow_demo_point_light_marker");
                 auto lightMarkerMesh = buildSphereMesh(lightMarkerTex, 0.075f, 12, 16);
+                lightMarkerMesh->SetCastsShadows(false);
                 if (auto* mat = lightMarkerMesh->GetMaterial())
                     {
                         mat->UseMetallicRoughnessPBR(glm::vec4(1.0f), 0.0f, 0.9f);
