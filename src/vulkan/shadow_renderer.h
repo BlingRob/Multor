@@ -35,23 +35,35 @@ public:
                          const ShadowPass& shadowPass,
                          ShadowMapArray& directionalShadowMaps,
                          const UBOs::ShadowPack& shadowPack,
-                         uint32_t frameIndex);
+                         uint32_t frameIndex,
+                         float rasterBiasConstant,
+                         float rasterBiasSlope);
 
     void DrawPoint(const std::list<std::shared_ptr<Mesh> >& meshes,
                    const ShadowPass& shadowPass, ShadowMapArray& pointShadowMaps,
-                   const UBOs::ShadowPack& shadowPack, uint32_t frameIndex);
+                   const UBOs::ShadowPack& shadowPack, uint32_t frameIndex,
+                   float rasterBiasConstant,
+                   float rasterBiasSlope);
 
     void DrawAll(const std::list<std::shared_ptr<Mesh> >& meshes,
                  const ShadowPass& shadowPass,
                  ShadowMapArray& directionalShadowMaps,
                  ShadowMapArray& pointShadowMaps,
-                 const UBOs::ShadowPack& shadowPack, uint32_t frameIndex);
+                 const UBOs::ShadowPack& shadowPack, uint32_t frameIndex,
+                 float directionalRasterBiasConstant,
+                 float directionalRasterBiasSlope,
+                 float pointRasterBiasConstant,
+                 float pointRasterBiasSlope);
 
     VkCommandBuffer BuildShadowCommandBufferAll(
         const std::list<std::shared_ptr<Mesh> >& meshes,
         const ShadowPass& shadowPass, ShadowMapArray& directionalShadowMaps,
         ShadowMapArray& pointShadowMaps, const UBOs::ShadowPack& shadowPack,
-        uint32_t frameIndex);
+        uint32_t frameIndex,
+        float directionalRasterBiasConstant,
+        float directionalRasterBiasSlope,
+        float pointRasterBiasConstant,
+        float pointRasterBiasSlope);
     void FreeCommandBuffer(VkCommandBuffer cmd) const;
 
 private:

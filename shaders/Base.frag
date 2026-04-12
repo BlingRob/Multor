@@ -36,6 +36,7 @@ struct PointShadowEntry
 {
     mat4 shadowMatrices[6];
     vec4 lightPosFar;
+    vec4 lightRange;
     ivec4 meta;
 };
 
@@ -81,6 +82,10 @@ layout(set = 0, binding = 15) uniform RenderOptions
     ivec4 options;
     vec4 pbrEnvironment;
     vec4 pbrEnvironment2;
+    vec4 shadowSettings0;
+    vec4 shadowSettings1;
+    vec4 shadowSettings2;
+    vec4 shadowSettings3;
 } renderOptions;
 
 layout(set = 0, binding = 3) uniform sampler2D diffuse;
@@ -100,215 +105,10 @@ layout(set = 0, binding = 19) uniform sampler2D prefilteredEnvironmentMap;
 layout(location = 0) out vec4 FragColor;
 layout(location = 0) in VS_OUT vs_out;
 
-float calcDirectionalShadow(int lightSlot, vec3 normal, vec3 lightDir)
-{
-    for (int i = 0; i < dirShadows.counts.x && i < 10; ++i)
-    {
-        if (dirShadows.entries[i].meta.z == 0 || dirShadows.entries[i].meta.y != lightSlot)
-            continue;
-
-        vec4 lightClip = dirShadows.entries[i].lightSpace * vec4(vs_out.FragPos, 1.0);
-        if (abs(lightClip.w) < 1e-6)
-            return 1.0;
-
-        vec3 proj = lightClip.xyz / lightClip.w;
-        proj = proj * 0.5 + 0.5;
-        if (proj.z > 1.0 || proj.x < 0.0 || proj.x > 1.0 || proj.y < 0.0 || proj.y > 1.0)
-            return 1.0;
-
-        float ndotl = max(dot(normal, lightDir), 0.0);
-        float bias = max(0.0025 * (1.0 - ndotl), 0.00075);
-        vec2 texelSize = 1.0 / vec2(textureSize(dirShadowMaps, 0).xy);
-        float visibility = 0.0;
-        for (int x = -1; x <= 1; ++x)
-        {
-            for (int y = -1; y <= 1; ++y)
-            {
-                vec2 uv = proj.xy + vec2(x, y) * texelSize;
-                visibility += texture(dirShadowMaps,
-                                      vec4(uv, float(dirShadows.entries[i].meta.x),
-                                           clamp(proj.z - bias, 0.0, 1.0)));
-            }
-        }
-        return max(visibility / 9.0, 0.32);
-    }
-    return 1.0;
-}
-
-int selectCubeFace(vec3 v)
-{
-    vec3 a = abs(v);
-    if (a.x >= a.y && a.x >= a.z)
-        return (v.x >= 0.0) ? 0 : 1;
-    if (a.y >= a.x && a.y >= a.z)
-        return (v.y >= 0.0) ? 2 : 3;
-    return (v.z >= 0.0) ? 4 : 5;
-}
-
-float calcPointShadow(int lightSlot, vec3 normal, vec3 lightDir)
-{
-    for (int i = 0; i < pointShadows.counts.x && i < 5; ++i)
-    {
-        if (pointShadows.entries[i].meta.z == 0 || pointShadows.entries[i].meta.y != lightSlot)
-            continue;
-
-        vec3 lightPos = pointShadows.entries[i].lightPosFar.xyz;
-        float farPlane = max(pointShadows.entries[i].lightPosFar.w, 0.0001);
-        float lightDistance = length(lightPos - vs_out.FragPos);
-        float normalOffset = mix(0.045, 0.11, clamp(lightDistance / farPlane, 0.0, 1.0));
-        vec3 samplePos = vs_out.FragPos + normal * normalOffset;
-        vec3 fragToLight = samplePos - lightPos;
-        if (length(fragToLight) < 1e-5)
-            return 1.0;
-
-        int face = selectCubeFace(fragToLight);
-        vec4 lightClip = pointShadows.entries[i].shadowMatrices[face] * vec4(samplePos, 1.0);
-        if (abs(lightClip.w) < 1e-6)
-            return 1.0;
-
-        vec3 proj = lightClip.xyz / lightClip.w;
-        float compareDepth = proj.z * 0.5 + 0.5;
-        float ndotl = max(dot(normal, lightDir), 0.0);
-        float distanceBias = 0.004 * clamp(lightDistance / farPlane, 0.0, 1.0);
-        float bias = max(0.02 * (1.0 - ndotl), 0.008) + distanceBias;
-        float refDepth = clamp(compareDepth - bias, 0.0, 1.0);
-
-        vec3 dir = normalize(fragToLight);
-        vec3 tangent = normalize(abs(dir.y) < 0.99 ? cross(dir, vec3(0.0, 1.0, 0.0))
-                                                   : cross(dir, vec3(1.0, 0.0, 0.0)));
-        vec3 bitangent = normalize(cross(dir, tangent));
-        float spread = mix(0.003, 0.009, clamp(lightDistance / farPlane, 0.0, 1.0));
-
-        float visibility = 0.0;
-        visibility += texture(pointShadowMaps, vec4(normalize(dir), float(pointShadows.entries[i].meta.x)), refDepth);
-        visibility += texture(pointShadowMaps, vec4(normalize(dir + tangent * spread), float(pointShadows.entries[i].meta.x)), refDepth);
-        visibility += texture(pointShadowMaps, vec4(normalize(dir - tangent * spread), float(pointShadows.entries[i].meta.x)), refDepth);
-        visibility += texture(pointShadowMaps, vec4(normalize(dir + bitangent * spread), float(pointShadows.entries[i].meta.x)), refDepth);
-        visibility += texture(pointShadowMaps, vec4(normalize(dir - bitangent * spread), float(pointShadows.entries[i].meta.x)), refDepth);
-        return max(visibility / 5.0, 0.4);
-    }
-    return 1.0;
-}
-
-vec3 getNormal()
-{
-    vec3 N = normalize(vs_out.Normal);
-    if (materialData.textureFlags0.z == 0)
-        return N;
-
-    vec3 T = normalize(vs_out.Tangent);
-    vec3 B = normalize(vs_out.Bitangent);
-    if (length(T) < 1e-4 || length(B) < 1e-4)
-        return N;
-
-    mat3 TBN = mat3(T, B, N);
-    vec3 tangentNormal = texture(normalMap, vs_out.TexCoords).xyz * 2.0 - 1.0;
-    tangentNormal.xy *= materialData.pbrFactors.z;
-    return normalize(TBN * tangentNormal);
-}
-
-float DistributionGGX(vec3 N, vec3 H, float roughness)
-{
-    float a = roughness * roughness;
-    float a2 = a * a;
-    float NdotH = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH * NdotH;
-    float nom = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-    return nom / max(denom, 0.0001);
-}
-
-float GeometrySchlickGGX(float NdotV, float roughness)
-{
-    float r = roughness + 1.0;
-    float k = (r * r) / 8.0;
-    float nom = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-    return nom / max(denom, 0.0001);
-}
-
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
-{
-    float ggx2 = GeometrySchlickGGX(max(dot(N, V), 0.0), roughness);
-    float ggx1 = GeometrySchlickGGX(max(dot(N, L), 0.0), roughness);
-    return ggx1 * ggx2;
-}
-
-vec3 fresnelSchlick(float cosTheta, vec3 F0)
-{
-    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}
-
-vec2 directionToEquirectUv(vec3 dir)
-{
-    dir = normalize(dir);
-    float u = atan(dir.z, dir.x) / (2.0 * PI) + 0.5;
-    float v = 0.5 - asin(clamp(dir.y, -1.0, 1.0)) / PI;
-    return vec2(u, v);
-}
-
-vec3 samplePrefilteredEnvironment(vec3 reflectionDir, vec3 N, float roughness)
-{
-    vec3 R = normalize(reflectionDir);
-    vec3 up = abs(R.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent = normalize(cross(up, R));
-    vec3 bitangent = normalize(cross(R, tangent));
-
-    float blurStrength = max(renderOptions.pbrEnvironment2.x, 0.0);
-    float sampleRadius = mix(0.0,
-                             0.12 * blurStrength *
-                                 max(renderOptions.pbrEnvironment2.y, 0.0),
-                             roughness * roughness);
-    float centerWeight = mix(1.6, 0.45, roughness) *
-                         max(renderOptions.pbrEnvironment2.z, 0.0);
-    float ringWeight = mix(0.15, 1.0, roughness) *
-                       max(renderOptions.pbrEnvironment2.w, 0.0);
-
-    vec3 accum = texture(prefilteredEnvironmentMap, directionToEquirectUv(R)).rgb *
-                 centerWeight;
-    float totalWeight = centerWeight;
-
-    if (sampleRadius > 1.0e-5)
-    {
-        const float angles[8] = float[8](
-            0.0,
-            PI * 0.25,
-            PI * 0.5,
-            PI * 0.75,
-            PI,
-            PI * 1.25,
-            PI * 1.5,
-            PI * 1.75);
-
-        for (int i = 0; i < 8; ++i)
-        {
-            vec2 disk = vec2(cos(angles[i]), sin(angles[i]));
-            vec3 sampleDir = normalize(R +
-                                       tangent * (disk.x * sampleRadius) +
-                                       bitangent * (disk.y * sampleRadius));
-            float nd = max(dot(N, sampleDir), 0.0);
-            float angularWeight = 0.85 + 0.15 * abs(disk.x);
-            float weight = ringWeight * angularWeight * mix(0.35, 1.0, nd);
-            accum += texture(prefilteredEnvironmentMap,
-                             directionToEquirectUv(sampleDir)).rgb *
-                     weight;
-            totalWeight += weight;
-        }
-    }
-
-    return accum / max(totalWeight, 1.0e-5);
-}
-
-vec3 approxEnvironmentSpecularFactor(vec3 N, vec3 V, vec3 F0, float roughness)
-{
-    float NdotV = max(dot(N, V), 0.0);
-    vec2 brdf = texture(brdfLutMap, vec2(NdotV, roughness)).rg;
-    vec3 spec = F0 * brdf.x + brdf.y;
-    spec *= renderOptions.pbrEnvironment.z;
-    spec *= renderOptions.pbrEnvironment.y * renderOptions.pbrEnvironment.w;
-    return spec;
-}
+#include "pbr_material.glsl"
+#include "pbr_brdf.glsl"
+#include "ibl_eval.glsl"
+#include "shadow_eval.glsl"
 
 void main()
 {
@@ -319,44 +119,26 @@ void main()
     vec3 directN = (renderOptions.options.z != 0) ? N : geomN;
     vec3 shadowN = geomN;
     vec3 V = normalize(cameraData.viewPos.xyz - vs_out.FragPos);
-    bool usePBR = materialData.textureFlags0.x == 1;
-
-    vec4 sampledBaseColor = texture(diffuse, vs_out.TexCoords);
-    if (usePBR && materialData.textureFlags0.y != 0)
-        sampledBaseColor = texture(baseColorMap, vs_out.TexCoords);
-
-    vec3 baseColor = sampledBaseColor.rgb;
-    if (usePBR)
-        baseColor *= materialData.baseColorFactor.rgb;
-
-    float metallic = materialData.pbrFactors.x;
-    float roughness = materialData.pbrFactors.y;
-    float ao = materialData.pbrFactors.w;
-    vec3 emissive = materialData.emissiveFactor.rgb;
-
-    if (usePBR)
-    {
-        if (materialData.textureFlags0.w != 0 || materialData.textureFlags1.y != 0)
-        {
-            vec4 metallicSample = texture(metallicMap, vs_out.TexCoords);
-            metallic *= (materialData.textureFlags1.y != 0) ? metallicSample.b : metallicSample.r;
-        }
-        if (materialData.textureFlags1.x != 0 || materialData.textureFlags1.y != 0)
-        {
-            vec4 roughnessSample = texture(roughnessMap, vs_out.TexCoords);
-            roughness *= (materialData.textureFlags1.y != 0) ? roughnessSample.g : roughnessSample.r;
-        }
-        if (materialData.textureFlags1.z != 0)
-            ao *= texture(aoMap, vs_out.TexCoords).r;
-        if (materialData.textureFlags1.w != 0)
-            emissive *= texture(emissiveMap, vs_out.TexCoords).rgb;
-    }
-
-    metallic = clamp(metallic, 0.0, 1.0);
-    roughness = clamp(roughness, 0.045, 1.0);
+    SampledMaterial material = sampleMaterial();
+    bool usePBR = material.usePBR;
+    vec4 sampledBaseColor = material.sampledBaseColor;
+    vec3 baseColor = material.baseColor;
+    float metallic = material.metallic;
+    float roughness = material.roughness;
+    float ao = material.ao;
+    vec3 emissive = material.emissive;
 
     vec3 lighting = vec3(0.0);
     vec3 F0 = mix(vec3(0.04), baseColor, metallic);
+    float debugShadowFactor = 1.0;
+    float debugShadowVisibilityRaw = 1.0;
+    vec3 debugShadowInputDelta = abs(directN - shadowN);
+    float debugShadowNdotL = 1.0;
+    float debugShadowBias = 0.0;
+    vec3 debugPointShadowFace = vec3(0.0);
+    float debugPointShadowDistanceRatio = 0.0;
+    float debugPointCompareDepth = 0.0;
+    bool hasShadowDebugLight = false;
 
     for (int i = 0; i < 16; ++i)
     {
@@ -407,9 +189,93 @@ void main()
             shadowFactor = calcDirectionalShadow(sceneLights.lights[i].meta.y, shadowN, L);
         else if (lightType == 2)
             shadowFactor = calcPointShadow(sceneLights.lights[i].meta.y, shadowN, L);
-        shadowFactor = mix(1.0, shadowFactor, 0.65);
+        debugShadowVisibilityRaw = min(debugShadowVisibilityRaw, shadowFactor);
+        shadowFactor = mix(1.0, shadowFactor, renderOptions.shadowSettings0.x);
+        debugShadowFactor = min(debugShadowFactor, shadowFactor);
 
         float NdotL = max(dot(directN, L), 0.0);
+        bool wantsThisLight =
+            (renderOptions.options.w < 0) ||
+            (sceneLights.lights[i].meta.y == renderOptions.options.w);
+        if (!hasShadowDebugLight && wantsThisLight)
+        {
+            float shadowNdotL = max(dot(shadowN, L), 0.0);
+            debugShadowNdotL = shadowNdotL;
+            if (lightType == 1 || lightType == 3)
+            {
+                float dirBiasScale = max(renderOptions.shadowSettings0.y, 0.0);
+                float directionalTerminatorNormalScale = max(renderOptions.shadowSettings2.w, 0.0);
+                float directionalNormalOffsetScale = max(renderOptions.shadowSettings2.x, 0.0);
+                float terminatorNormal =
+                    (1.0 - shadowNdotL) * 0.02 * directionalTerminatorNormalScale;
+                float normalOffset =
+                    mix(0.0005, 0.003, 1.0 - shadowNdotL) * directionalNormalOffsetScale;
+                debugShadowBias =
+                    (max(0.0025 * (1.0 - shadowNdotL), 0.00075) * dirBiasScale) +
+                    terminatorNormal + normalOffset;
+            }
+            else if (lightType == 2)
+            {
+                vec3 lightPos = sceneLights.lights[i].lightVec.xyz;
+                float lightDistance = length(lightPos - vs_out.FragPos);
+                float nearPlane = 0.1;
+                float farPlane = 25.0;
+                float invRange = 1.0 / max(farPlane - nearPlane, 1.0e-4);
+                int pointShadowEntryIndex = -1;
+                for (int p = 0; p < pointShadows.counts.x && p < 5; ++p)
+                {
+                    if (pointShadows.entries[p].meta.z != 0 &&
+                        pointShadows.entries[p].meta.y == sceneLights.lights[i].meta.y)
+                    {
+                        nearPlane = pointShadows.entries[p].lightRange.x;
+                        farPlane = max(pointShadows.entries[p].lightRange.y, nearPlane + 1.0e-4);
+                        invRange = pointShadows.entries[p].lightRange.z;
+                        pointShadowEntryIndex = p;
+                        break;
+                    }
+                }
+                debugPointShadowFace =
+                    pointShadowFaceDebugColor(selectCubeFace(vs_out.FragPos - lightPos));
+                debugPointShadowDistanceRatio =
+                    clamp(lightDistance / farPlane, 0.0, 1.0);
+                vec3 samplePos = vs_out.FragPos;
+                vec3 fragToLight = samplePos - lightPos;
+                int debugFace = selectCubeFace(fragToLight);
+                if (pointShadowEntryIndex >= 0)
+                {
+                    vec4 lightClip =
+                        pointShadows.entries[pointShadowEntryIndex]
+                            .shadowMatrices[debugFace] *
+                        vec4(samplePos, 1.0);
+                    if (abs(lightClip.w) > 1.0e-6)
+                    {
+                        vec3 proj = lightClip.xyz / lightClip.w;
+                        debugPointCompareDepth =
+                            clamp(proj.z * 0.5 + 0.5, 0.0, 1.0);
+                    }
+                }
+                float pointBiasScale = max(renderOptions.shadowSettings0.z, 0.0);
+                float pointNormalOffsetScale = max(renderOptions.shadowSettings0.w, 0.0);
+                float pointTerminatorNormalScale = max(renderOptions.shadowSettings2.y, 0.0);
+                float pointTerminatorGeometryScale = max(renderOptions.shadowSettings2.z, 0.0);
+                float distanceFactor =
+                    clamp((lightDistance - nearPlane) * invRange, 0.0, 1.0);
+                float distanceBias = mix(0.0015, 0.0045, distanceFactor);
+                float depthBias = mix(0.0010, 0.0035, debugPointCompareDepth);
+                float normalOffset =
+                    mix(0.045, 0.11, distanceFactor) * pointNormalOffsetScale;
+                float terminatorNormal =
+                    (1.0 - shadowNdotL) * 0.06 * pointTerminatorNormalScale;
+                float terminatorGeometry =
+                    (1.0 - shadowNdotL) * 0.03 * pointTerminatorGeometryScale;
+                debugShadowBias =
+                    (max(0.016 * (1.0 - shadowNdotL), 0.0065) + distanceBias + depthBias) *
+                        pointBiasScale +
+                    normalOffset + terminatorNormal + terminatorGeometry;
+                debugPointShadowDistanceRatio = distanceFactor;
+            }
+            hasShadowDebugLight = true;
+        }
         if (NdotL <= 0.0)
         {
             lighting += sceneLights.lights[i].ambient.rgb * baseColor * attenuation;
@@ -514,6 +380,37 @@ void main()
             break;
         case 12:
             finalColor = abs(N - geomN);
+            break;
+        case 13:
+            finalColor = vec3(debugShadowFactor);
+            break;
+        case 14:
+            finalColor = debugShadowInputDelta;
+            break;
+        case 15:
+            finalColor = vec3(debugShadowNdotL);
+            break;
+        case 16:
+        {
+            float heat = clamp(debugShadowBias * 12.0, 0.0, 1.0);
+            finalColor = mix(vec3(0.0, 0.0, 1.0),
+                             vec3(1.0, 0.0, 0.0),
+                             heat);
+            break;
+        }
+        case 17:
+            finalColor = vec3(debugShadowVisibilityRaw);
+            break;
+        case 18:
+            finalColor = debugPointShadowFace;
+            break;
+        case 19:
+            finalColor = mix(vec3(0.0, 0.2, 0.9),
+                             vec3(1.0, 0.85, 0.15),
+                             debugPointShadowDistanceRatio);
+            break;
+        case 20:
+            finalColor = vec3(debugPointCompareDepth);
             break;
         default:
             break;

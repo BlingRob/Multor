@@ -46,6 +46,22 @@ const char* PbrDebugViewName(Multor::Vulkan::PbrDebugView view)
             return "Bitangent";
         case Multor::Vulkan::PbrDebugView::NormalDelta:
             return "Normal Delta";
+        case Multor::Vulkan::PbrDebugView::ShadowFactor:
+            return "Shadow Factor";
+        case Multor::Vulkan::PbrDebugView::ShadowInputDelta:
+            return "Shadow Input Delta";
+        case Multor::Vulkan::PbrDebugView::ShadowNdotL:
+            return "Shadow NdotL";
+        case Multor::Vulkan::PbrDebugView::ShadowBiasHeatmap:
+            return "Shadow Bias Heatmap";
+        case Multor::Vulkan::PbrDebugView::ShadowVisibilityRaw:
+            return "Shadow Visibility Raw";
+        case Multor::Vulkan::PbrDebugView::PointShadowFace:
+            return "Point Shadow Face";
+        case Multor::Vulkan::PbrDebugView::PointShadowDistanceRatio:
+            return "Point Shadow Distance Ratio";
+        case Multor::Vulkan::PbrDebugView::PointCompareDepth:
+            return "Point Compare Depth";
         case Multor::Vulkan::PbrDebugView::Shaded:
         default:
             return "Shaded";
@@ -127,6 +143,165 @@ bool DrawPbrEnvironmentEditor(Multor::Vulkan::PbrEnvironmentSettings& settings,
             changed = true;
         }
     return changed;
+}
+
+bool DrawShadowSettingsEditor(Multor::Vulkan::ShadowSettings& settings,
+                              std::string_view suffix = {})
+{
+    const std::string suffixStr(suffix);
+    bool changed = false;
+    if (ImGui::Button(("Shadow Preset: Demo Safe##" + suffixStr).c_str()))
+        {
+            settings.strength_ = 0.5f;
+            settings.directionalBiasScale_ = 1.25f;
+            settings.pointBiasScale_ = 1.4f;
+            settings.pointNormalOffsetScale_ = 1.15f;
+            settings.pointPcfSpreadScale_ = 1.0f;
+            settings.minDirectionalVisibility_ = 0.45f;
+            settings.minPointVisibility_ = 0.52f;
+            settings.directionalPcfSpreadScale_ = 1.0f;
+            settings.directionalNormalOffsetScale_ = 1.2f;
+            settings.pointTerminatorNormalScale_ = 0.6f;
+            settings.pointTerminatorGeometryScale_ = 0.25f;
+            settings.directionalTerminatorNormalScale_ = 0.45f;
+            settings.directionalTerminatorGeometryScale_ = 0.15f;
+            settings.directionalRasterBiasConstant_ = 2.5f;
+            settings.directionalRasterBiasSlope_ = 10.0f;
+            settings.pointRasterBiasConstant_ = 1.3f;
+            settings.pointRasterBiasSlope_ = 5.0f;
+            changed = true;
+        }
+    ImGui::SameLine();
+    if (ImGui::Button(("Shadow Preset: Balanced##" + suffixStr).c_str()))
+        {
+            settings = Multor::Vulkan::ShadowSettings {};
+            changed = true;
+        }
+    ImGui::SameLine();
+    if (ImGui::Button(("Shadow Preset: Sharper##" + suffixStr).c_str()))
+        {
+            settings.strength_ = 0.75f;
+            settings.directionalBiasScale_ = 0.9f;
+            settings.pointBiasScale_ = 0.95f;
+            settings.pointNormalOffsetScale_ = 0.85f;
+            settings.pointPcfSpreadScale_ = 0.8f;
+            settings.minDirectionalVisibility_ = 0.22f;
+            settings.minPointVisibility_ = 0.28f;
+            settings.directionalPcfSpreadScale_ = 0.85f;
+            settings.directionalNormalOffsetScale_ = 0.8f;
+            settings.pointTerminatorNormalScale_ = 0.3f;
+            settings.pointTerminatorGeometryScale_ = 0.1f;
+            settings.directionalTerminatorNormalScale_ = 0.25f;
+            settings.directionalTerminatorGeometryScale_ = 0.08f;
+            settings.directionalRasterBiasConstant_ = 2.0f;
+            settings.directionalRasterBiasSlope_ = 8.0f;
+            settings.pointRasterBiasConstant_ = 0.9f;
+            settings.pointRasterBiasSlope_ = 3.2f;
+            changed = true;
+        }
+    ImGui::Separator();
+    changed |= ImGui::SliderFloat(("Shadow Strength##" + suffixStr).c_str(),
+                                  &settings.strength_, 0.0f, 1.0f);
+    changed |= ImGui::SliderFloat(
+        ("Dir Bias Scale##" + suffixStr).c_str(),
+        &settings.directionalBiasScale_, 0.2f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Point Bias Scale##" + suffixStr).c_str(),
+        &settings.pointBiasScale_, 0.2f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Point Normal Offset##" + suffixStr).c_str(),
+        &settings.pointNormalOffsetScale_, 0.2f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Point PCF Spread##" + suffixStr).c_str(),
+        &settings.pointPcfSpreadScale_, 0.2f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Dir PCF Spread##" + suffixStr).c_str(),
+        &settings.directionalPcfSpreadScale_, 0.2f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Dir Normal Offset##" + suffixStr).c_str(),
+        &settings.directionalNormalOffsetScale_, 0.0f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Point Terminator N##" + suffixStr).c_str(),
+        &settings.pointTerminatorNormalScale_, 0.0f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Point Terminator G##" + suffixStr).c_str(),
+        &settings.pointTerminatorGeometryScale_, 0.0f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Dir Terminator N##" + suffixStr).c_str(),
+        &settings.directionalTerminatorNormalScale_, 0.0f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Dir Terminator G##" + suffixStr).c_str(),
+        &settings.directionalTerminatorGeometryScale_, 0.0f, 4.0f);
+    changed |= ImGui::SliderFloat(
+        ("Dir Raster Const##" + suffixStr).c_str(),
+        &settings.directionalRasterBiasConstant_, 0.0f, 8.0f);
+    changed |= ImGui::SliderFloat(
+        ("Dir Raster Slope##" + suffixStr).c_str(),
+        &settings.directionalRasterBiasSlope_, 0.0f, 20.0f);
+    changed |= ImGui::SliderFloat(
+        ("Point Raster Const##" + suffixStr).c_str(),
+        &settings.pointRasterBiasConstant_, 0.0f, 8.0f);
+    changed |= ImGui::SliderFloat(
+        ("Point Raster Slope##" + suffixStr).c_str(),
+        &settings.pointRasterBiasSlope_, 0.0f, 20.0f);
+    changed |= ImGui::SliderFloat(
+        ("Dir Min Visibility##" + suffixStr).c_str(),
+        &settings.minDirectionalVisibility_, 0.0f, 1.0f);
+    changed |= ImGui::SliderFloat(
+        ("Point Min Visibility##" + suffixStr).c_str(),
+        &settings.minPointVisibility_, 0.0f, 1.0f);
+    return changed;
+}
+
+bool DrawShadowDebugLightSelector(const std::shared_ptr<Multor::Scene>& scene,
+                                  const std::shared_ptr<Multor::Vulkan::Renderer>& renderer,
+                                  int& selectedSlot)
+{
+    if (!scene || !renderer)
+        return false;
+
+    std::vector<std::pair<int, std::string> > entries;
+    entries.emplace_back(-1, "Auto / First Active");
+
+    auto lights = scene->GetLights();
+    for (auto it = lights.first; it != lights.second; ++it)
+        {
+            auto light = it->second;
+            if (!light || !light->HasLightSlot())
+                continue;
+
+            std::string label = std::string(LightTypeName(light->GetType())) +
+                                " [slot " +
+                                std::to_string(light->GetLightSlot()) + "]";
+            if (!light->GetName().empty())
+                label += " " + std::string(light->GetName());
+            entries.emplace_back(light->GetLightSlot(), std::move(label));
+        }
+
+    int currentIndex = 0;
+    for (int i = 0; i < static_cast<int>(entries.size()); ++i)
+        {
+            if (entries[i].first == selectedSlot)
+                {
+                    currentIndex = i;
+                    break;
+                }
+        }
+
+    std::vector<const char*> labels;
+    labels.reserve(entries.size());
+    for (auto& entry : entries)
+        labels.push_back(entry.second.c_str());
+
+    if (ImGui::Combo("Shadow Debug Light", &currentIndex, labels.data(),
+                     static_cast<int>(labels.size())))
+        {
+            selectedSlot = entries[currentIndex].first;
+            renderer->SetDebugShadowLightSlot(selectedSlot);
+            return true;
+        }
+
+    return false;
 }
 
 bool DrawNodeMaterialNormalScale(const std::shared_ptr<Node>& node,
@@ -587,7 +762,7 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             if (ImGui::BeginMenu("PBR Debug View"))
                                 {
                                     for (int i = static_cast<int>(Vulkan::PbrDebugView::Shaded);
-                                         i <= static_cast<int>(Vulkan::PbrDebugView::NormalDelta); ++i)
+                                         i <= static_cast<int>(Vulkan::PbrDebugView::ShadowVisibilityRaw); ++i)
                                         {
                                             const auto view = static_cast<Vulkan::PbrDebugView>(i);
                                             const bool selected = (view == currentView);
@@ -603,6 +778,9 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                                 {
                                     if (DrawPbrEnvironmentEditor(pbrSettings, "menu"))
                                         renderer->SetPbrEnvironmentSettings(pbrSettings);
+                                    auto shadowSettings = renderer->GetShadowSettings();
+                                    if (DrawShadowSettingsEditor(shadowSettings, "menu"))
+                                        renderer->SetShadowSettings(shadowSettings);
                                     if (ImGui::MenuItem("Open Environment Window"))
                                         showPbrEnvironmentWindow_ = true;
                                     ImGui::EndMenu();
@@ -636,6 +814,54 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                     if (renderer)
                         {
                             ImGui::Text("Frame idx: %zu", renderer->GetCurFrame());
+                            ImGui::Text("PBR Debug: %s",
+                                        PbrDebugViewName(
+                                            renderer->GetPbrDebugView()));
+                            const int shadowDebugSlot =
+                                renderer->GetDebugShadowLightSlot();
+                            if (shadowDebugSlot >= 0)
+                                ImGui::Text("Shadow Debug Light: slot %d",
+                                            shadowDebugSlot);
+                            else
+                                ImGui::TextUnformatted(
+                                    "Shadow Debug Light: auto");
+
+                            if (scene)
+                                {
+                                    auto lights = scene->GetLights();
+                                    for (auto it = lights.first; it != lights.second; ++it)
+                                        {
+                                            auto light = it->second;
+                                            if (!light || !light->HasLightSlot())
+                                                continue;
+                                            if (shadowDebugSlot >= 0 &&
+                                                light->GetLightSlot() != shadowDebugSlot)
+                                                continue;
+
+                                            ImGui::Text("Debug Light Type: %s",
+                                                        LightTypeName(light->GetType()));
+                                            if (!light->GetName().empty())
+                                                ImGui::TextWrapped("Debug Light Name: %s",
+                                                                   std::string(light->GetName()).c_str());
+
+                                            if (auto point = std::dynamic_pointer_cast<PointLight>(light))
+                                                {
+                                                    const auto pos = point->GetPos();
+                                                    ImGui::Text("Debug Light Pos: %.2f %.2f %.2f",
+                                                                pos.x, pos.y, pos.z);
+                                                    if (const auto* pointShadow =
+                                                            dynamic_cast<const PointShadow*>(point->GetShadow()))
+                                                        {
+                                                            ImGui::Text("Point Shadow Range: %.2f .. %.2f",
+                                                                        pointShadow->GetNearPlane(),
+                                                                        pointShadow->GetFarPlane());
+                                                            ImGui::Text("Point Face Padding: %.2f",
+                                                                        pointShadow->GetFacePaddingTexels());
+                                                        }
+                                                }
+                                            break;
+                                        }
+                                }
                         }
                     ImGui::Separator();
                     ImGui::TextWrapped("%s", backendStatus_.c_str());
@@ -684,6 +910,9 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             auto settings = renderer->GetPbrEnvironmentSettings();
                             if (DrawPbrEnvironmentEditor(settings, "envwindow"))
                                 renderer->SetPbrEnvironmentSettings(settings);
+                            auto shadowSettings = renderer->GetShadowSettings();
+                            if (DrawShadowSettingsEditor(shadowSettings, "envwindow"))
+                                renderer->SetShadowSettings(shadowSettings);
 
                             if (scene)
                                 {
@@ -975,6 +1204,37 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                                             point->SetPos(p);
                                             lightsChanged = true;
                                         }
+
+                                    if (const auto* pointShadow =
+                                            dynamic_cast<const PointShadow*>(point->GetShadow()))
+                                        {
+                                            float shadowNear = pointShadow->GetNearPlane();
+                                            float shadowFar = pointShadow->GetFarPlane();
+                                            float facePadding = pointShadow->GetFacePaddingTexels();
+                                            if (ImGui::SliderFloat(
+                                                    ("Shadow Near##" + std::to_string(idx)).c_str(),
+                                                    &shadowNear, 0.05f, 4.0f, "%.2f"))
+                                                {
+                                                    shadowNear = std::min(shadowNear, shadowFar - 0.1f);
+                                                    point->SetShadowRange(shadowNear, shadowFar);
+                                                    lightsChanged = true;
+                                                }
+                                            if (ImGui::SliderFloat(
+                                                    ("Shadow Far##" + std::to_string(idx)).c_str(),
+                                                    &shadowFar, 2.0f, 80.0f, "%.2f"))
+                                                {
+                                                    shadowFar = std::max(shadowFar, shadowNear + 0.1f);
+                                                    point->SetShadowRange(shadowNear, shadowFar);
+                                                    lightsChanged = true;
+                                                }
+                                            if (ImGui::SliderFloat(
+                                                    ("Face Padding##" + std::to_string(idx)).c_str(),
+                                                    &facePadding, 0.0f, 8.0f, "%.2f"))
+                                                {
+                                                    point->SetShadowFacePaddingTexels(facePadding);
+                                                    lightsChanged = true;
+                                                }
+                                        }
                                 }
 
                             if (auto spot = std::dynamic_pointer_cast<SpotLight>(light))
@@ -1013,7 +1273,12 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                                 "Roughness", "AO", "Emissive",
                                 "Env Diffuse", "Env Specular",
                                 "Geom Normal", "Tangent",
-                                "Bitangent", "Normal Delta"};
+                                "Bitangent", "Normal Delta",
+                                "Shadow Factor", "Shadow Input Delta",
+                                "Shadow NdotL", "Shadow Bias Heatmap",
+                                "Shadow Visibility Raw", "Point Shadow Face",
+                                "Point Shadow Distance Ratio",
+                                "Point Compare Depth"};
                             if (ImGui::Combo("PBR Debug View", &debugView, debugItems,
                                              IM_ARRAYSIZE(debugItems)))
                                 renderer->SetPbrDebugView(
@@ -1021,6 +1286,11 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             auto pbrSettings = renderer->GetPbrEnvironmentSettings();
                             if (DrawPbrEnvironmentEditor(pbrSettings, "materials"))
                                 renderer->SetPbrEnvironmentSettings(pbrSettings);
+                            auto shadowSettings = renderer->GetShadowSettings();
+                            if (DrawShadowSettingsEditor(shadowSettings, "materials"))
+                                renderer->SetShadowSettings(shadowSettings);
+                            DrawShadowDebugLightSelector(scene, renderer,
+                                                         selectedShadowDebugLightSlot_);
                             ImGui::Separator();
                         }
 
@@ -1078,6 +1348,11 @@ void ImGuiOverlay::Draw(const std::shared_ptr<Scene>& scene,
                             auto pbrSettings = renderer->GetPbrEnvironmentSettings();
                             if (DrawPbrEnvironmentEditor(pbrSettings, "debug"))
                                 renderer->SetPbrEnvironmentSettings(pbrSettings);
+                            auto shadowSettings = renderer->GetShadowSettings();
+                            if (DrawShadowSettingsEditor(shadowSettings, "debug"))
+                                renderer->SetShadowSettings(shadowSettings);
+                            DrawShadowDebugLightSelector(scene, renderer,
+                                                         selectedShadowDebugLightSlot_);
                         }
                     if (scene)
                         {

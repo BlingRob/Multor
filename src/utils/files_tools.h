@@ -14,6 +14,7 @@ namespace Multor
 /// \brief Read text file
 /// \param[in] path path to file
 std::string LoadTextFile(std::string_view path);
+std::string LoadTextFileRaw(std::string_view path);
 
 } // namespace Multor
 

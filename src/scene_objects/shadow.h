@@ -36,7 +36,8 @@ public:
 
     int32_t  GetId() const;
     uint32_t GetShadowMapSize() const;
-    float    GetFarPlane() const;
+    virtual float GetFarPlane() const;
+    virtual float GetNearPlane() const;
 
 protected:
     Shadow() = default;
@@ -56,10 +57,18 @@ public:
 
     ShadowType GetType() const override;
 
+    void SetPerspectiveRange(float zNear, float zFar);
+    void SetFacePaddingTexels(float paddingTexels);
+    float GetFarPlane() const override;
+    float GetNearPlane() const override;
+    float GetFacePaddingTexels() const;
     glm::mat4 GetProjectionMatrix() const;
     std::array<glm::mat4, 6> BuildShadowMatrices(const glm::vec3& lightPos) const;
 
 private:
+    float nearPlane_ = 0.1f;
+    float farPlane_ = kFarPlane_;
+    float facePaddingTexels_ = 1.0f;
     static inline std::list<int32_t> shadowIds_ {};
     static inline bool               initializedIds_ = false;
 };

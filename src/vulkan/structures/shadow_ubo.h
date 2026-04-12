@@ -34,6 +34,8 @@ struct alignas(16) PointShadowEntry
     alignas(16) std::array<glm::mat4, 6> shadowMatrices_ {};
     // xyz = light position, w = far plane
     alignas(16) glm::vec4 lightPosFar_ {};
+    // x = near plane, y = far plane, z = 1 / max(far - near, eps), w = reserved
+    alignas(16) glm::vec4 lightRange_ {};
     // x = shadow id, y = light slot, z = enabled, w = reserved
     alignas(16) glm::ivec4 meta_ {-1, -1, 0, 0};
 };

@@ -52,6 +52,10 @@ public:
     PbrDebugView GetPbrDebugView() const;
     void SetPbrEnvironmentSettings(const PbrEnvironmentSettings& settings);
     const PbrEnvironmentSettings& GetPbrEnvironmentSettings() const;
+    void SetShadowSettings(const ShadowSettings& settings);
+    const ShadowSettings& GetShadowSettings() const;
+    void SetDebugShadowLightSlot(int slot);
+    int GetDebugShadowLightSlot() const;
     bool LoadEnvironmentTexture(std::string_view path);
     void ClearEnvironmentTexture();
     bool HasEnvironmentTexture() const;
@@ -144,6 +148,8 @@ private:
     bool shadowsEnabled_ = true;
     PbrDebugView pbrDebugView_ = PbrDebugView::Shaded;
     PbrEnvironmentSettings pbrEnvironmentSettings_ {};
+    ShadowSettings shadowSettings_ {};
+    int debugShadowLightSlot_ = -1;
 
     std::list<std::shared_ptr<Mesh> > meshes_;
     std::vector<std::shared_ptr<Multor::BLight> > lights_;

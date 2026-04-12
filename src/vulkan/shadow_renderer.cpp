@@ -11,11 +11,6 @@ namespace Multor::Vulkan
 {
 namespace
 {
-constexpr float kDirectionalDepthBiasConstant = 2.5f;
-constexpr float kDirectionalDepthBiasSlope    = 10.0f;
-constexpr float kPointDepthBiasConstant       = 1.1f;
-constexpr float kPointDepthBiasSlope          = 4.0f;
-
 bool hasStencilComponentShadow(VkFormat format)
 {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
@@ -273,7 +268,11 @@ void ShadowRenderer::FreeCommandBuffer(VkCommandBuffer cmd) const
 VkCommandBuffer ShadowRenderer::BuildShadowCommandBufferAll(
     const std::list<std::shared_ptr<Mesh> >& meshes, const ShadowPass& shadowPass,
     ShadowMapArray& directionalShadowMaps, ShadowMapArray& pointShadowMaps,
-    const UBOs::ShadowPack& shadowPack, uint32_t frameIndex)
+    const UBOs::ShadowPack& shadowPack, uint32_t frameIndex,
+    float directionalRasterBiasConstant,
+    float directionalRasterBiasSlope,
+    float pointRasterBiasConstant,
+    float pointRasterBiasSlope)
 {
     if (directionalPipeline_ == VK_NULL_HANDLE)
         return VK_NULL_HANDLE;
@@ -341,8 +340,8 @@ VkCommandBuffer ShadowRenderer::BuildShadowCommandBufferAll(
                                       directionalPipeline_);
                     vkCmdSetViewport(cmd, 0, 1, &viewport);
                     vkCmdSetScissor(cmd, 0, 1, &scissor);
-                    vkCmdSetDepthBias(cmd, kDirectionalDepthBiasConstant, 0.0f,
-                                      kDirectionalDepthBiasSlope);
+                    vkCmdSetDepthBias(cmd, directionalRasterBiasConstant, 0.0f,
+                                      directionalRasterBiasSlope);
 
                     VkDeviceSize offsets[] = {0};
                     for (auto& mesh : meshes)
@@ -416,8 +415,8 @@ VkCommandBuffer ShadowRenderer::BuildShadowCommandBufferAll(
                                               directionalPipeline_);
                             vkCmdSetViewport(cmd, 0, 1, &viewport);
                             vkCmdSetScissor(cmd, 0, 1, &scissor);
-                            vkCmdSetDepthBias(cmd, kPointDepthBiasConstant, 0.0f,
-                                              kPointDepthBiasSlope);
+                            vkCmdSetDepthBias(cmd, pointRasterBiasConstant, 0.0f,
+                                              pointRasterBiasSlope);
 
                             VkDeviceSize offsets[] = {0};
                             for (auto& mesh : meshes)
@@ -486,11 +485,16 @@ void ShadowRenderer::DrawAll(const std::list<std::shared_ptr<Mesh> >& meshes,
                              ShadowMapArray& directionalShadowMaps,
                              ShadowMapArray& pointShadowMaps,
                              const UBOs::ShadowPack& shadowPack,
-                             uint32_t frameIndex)
+                             uint32_t frameIndex,
+                             float directionalRasterBiasConstant,
+                             float directionalRasterBiasSlope,
+                             float pointRasterBiasConstant,
+                             float pointRasterBiasSlope)
 {
     VkCommandBuffer cmd = BuildShadowCommandBufferAll(
         meshes, shadowPass, directionalShadowMaps, pointShadowMaps, shadowPack,
-        frameIndex);
+        frameIndex, directionalRasterBiasConstant, directionalRasterBiasSlope,
+        pointRasterBiasConstant, pointRasterBiasSlope);
     if (cmd == VK_NULL_HANDLE)
         return;
     endOneTimeCommand(cmd);
@@ -500,7 +504,9 @@ void ShadowRenderer::DrawDirectional(const std::list<std::shared_ptr<Mesh> >& me
                                      const ShadowPass& shadowPass,
                                      ShadowMapArray& directionalShadowMaps,
                                      const UBOs::ShadowPack& shadowPack,
-                                     uint32_t frameIndex)
+                                     uint32_t frameIndex,
+                                     float rasterBiasConstant,
+                                     float rasterBiasSlope)
 {
     if (directionalPipeline_ == VK_NULL_HANDLE)
         return;
@@ -550,8 +556,8 @@ void ShadowRenderer::DrawDirectional(const std::list<std::shared_ptr<Mesh> >& me
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, directionalPipeline_);
             vkCmdSetViewport(cmd, 0, 1, &viewport);
             vkCmdSetScissor(cmd, 0, 1, &scissor);
-            vkCmdSetDepthBias(cmd, kDirectionalDepthBiasConstant, 0.0f,
-                              kDirectionalDepthBiasSlope);
+            vkCmdSetDepthBias(cmd, rasterBiasConstant, 0.0f,
+                              rasterBiasSlope);
 
             VkDeviceSize offsets[] = {0};
             for (auto& mesh : meshes)
@@ -589,7 +595,9 @@ void ShadowRenderer::DrawDirectional(const std::list<std::shared_ptr<Mesh> >& me
 
 void ShadowRenderer::DrawPoint(const std::list<std::shared_ptr<Mesh> >& meshes,
                                const ShadowPass& shadowPass, ShadowMapArray& pointShadowMaps,
-                               const UBOs::ShadowPack& shadowPack, uint32_t frameIndex)
+                               const UBOs::ShadowPack& shadowPack, uint32_t frameIndex,
+                               float rasterBiasConstant,
+                               float rasterBiasSlope)
 {
     if (directionalPipeline_ == VK_NULL_HANDLE)
         return;
@@ -641,8 +649,8 @@ void ShadowRenderer::DrawPoint(const std::list<std::shared_ptr<Mesh> >& meshes,
                     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, directionalPipeline_);
                     vkCmdSetViewport(cmd, 0, 1, &viewport);
                     vkCmdSetScissor(cmd, 0, 1, &scissor);
-                    vkCmdSetDepthBias(cmd, kPointDepthBiasConstant, 0.0f,
-                                      kPointDepthBiasSlope);
+                    vkCmdSetDepthBias(cmd, rasterBiasConstant, 0.0f,
+                                      rasterBiasSlope);
 
                     VkDeviceSize offsets[] = {0};
                     for (auto& mesh : meshes)

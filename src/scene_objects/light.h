@@ -100,6 +100,8 @@ public:
                const glm::vec3& specular, const glm::vec3& attenuation,
                const glm::vec3& position);
 
+    void      SetShadowRange(float zNear, float zFar);
+    void      SetShadowFacePaddingTexels(float paddingTexels);
     void      SetPos(const glm::vec3& position);
     glm::vec3 GetPos() const;
     LightType GetType() const override;

@@ -10,6 +10,18 @@
 
 namespace Multor
 {
+namespace
+{
+
+float computePointShadowFaceFovDegrees(uint32_t shadowMapSize,
+                                       float paddingTexels)
+{
+    const float resolution = std::max(static_cast<float>(shadowMapSize), 1.0f);
+    const float padded = (resolution + paddingTexels) / resolution;
+    return glm::degrees(2.0f * atan(padded));
+}
+
+} // namespace
 
 int32_t Shadow::GetId() const
 {
@@ -24,6 +36,11 @@ uint32_t Shadow::GetShadowMapSize() const
 float Shadow::GetFarPlane() const
 {
     return kFarPlane_;
+}
+
+float Shadow::GetNearPlane() const
+{
+    return 0.1f;
 }
 
 PointShadow::PointShadow()
@@ -54,9 +71,37 @@ ShadowType PointShadow::GetType() const
     return ShadowType::Point;
 }
 
+void PointShadow::SetPerspectiveRange(float zNear, float zFar)
+{
+    nearPlane_ = std::max(0.01f, zNear);
+    farPlane_ = std::max(nearPlane_ + 0.1f, zFar);
+}
+
+void PointShadow::SetFacePaddingTexels(float paddingTexels)
+{
+    facePaddingTexels_ = std::clamp(paddingTexels, 0.0f, 8.0f);
+}
+
+float PointShadow::GetFarPlane() const
+{
+    return farPlane_;
+}
+
+float PointShadow::GetNearPlane() const
+{
+    return nearPlane_;
+}
+
+float PointShadow::GetFacePaddingTexels() const
+{
+    return facePaddingTexels_;
+}
+
 glm::mat4 PointShadow::GetProjectionMatrix() const
 {
-    return glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, kFarPlane_);
+    const float fovDegrees =
+        computePointShadowFaceFovDegrees(GetShadowMapSize(), facePaddingTexels_);
+    return glm::perspective(glm::radians(fovDegrees), 1.0f, nearPlane_, farPlane_);
 }
 
 std::array<glm::mat4, 6>
@@ -69,7 +114,7 @@ PointShadow::BuildShadowMatrices(const glm::vec3& lightPos) const
         proj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f),
                            glm::vec3(0.0f, -1.0f, 0.0f)),
         proj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f),
-                           glm::vec3(0.0f, 0.0f, -1.0f)),
+                           glm::vec3(0.0f, 0.0f, 1.0f)),
         proj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f),
                            glm::vec3(0.0f, 0.0f, -1.0f)),
         proj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f),

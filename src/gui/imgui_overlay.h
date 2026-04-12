@@ -74,6 +74,7 @@ private:
     std::array<char, 512> irradiancePath_ {};
     std::array<char, 512> prefilteredEnvironmentPath_ {};
     std::array<char, 512> brdfLutPath_ {};
+    int selectedShadowDebugLightSlot_ = -1;
     std::string openSceneStatus_;
     std::string environmentStatus_;
 };

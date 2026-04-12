@@ -276,6 +276,26 @@ const PbrEnvironmentSettings& Renderer::GetPbrEnvironmentSettings() const
     return pbrEnvironmentSettings_;
 }
 
+void Renderer::SetShadowSettings(const ShadowSettings& settings)
+{
+    shadowSettings_ = settings;
+}
+
+const ShadowSettings& Renderer::GetShadowSettings() const
+{
+    return shadowSettings_;
+}
+
+void Renderer::SetDebugShadowLightSlot(int slot)
+{
+    debugShadowLightSlot_ = slot;
+}
+
+int Renderer::GetDebugShadowLightSlot() const
+{
+    return debugShadowLightSlot_;
+}
+
 bool Renderer::LoadEnvironmentTexture(std::string_view path)
 {
     if (path.empty())
@@ -546,7 +566,7 @@ void Renderer::createGraphicsPipeline()
     colorBlendAttachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable         = VK_TRUE;
+    colorBlendAttachment.blendEnable         = VK_FALSE;
     colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     colorBlendAttachment.dstColorBlendFactor =
         VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -771,7 +791,11 @@ void Renderer::Draw()
         {
             shadowCmd = shadowRenderer_->BuildShadowCommandBufferAll(
                 meshes_, *shadowPass_, directionalShadowMaps_, pointShadowMaps_,
-                shadowPackCache_, imageIndex_);
+                shadowPackCache_, imageIndex_,
+                shadowSettings_.directionalRasterBiasConstant_,
+                shadowSettings_.directionalRasterBiasSlope_,
+                shadowSettings_.pointRasterBiasConstant_,
+                shadowSettings_.pointRasterBiasSlope_);
             if (currentFrame_ < shadowCommandBuffersInFlight_.size())
                 shadowCommandBuffersInFlight_[currentFrame_] = shadowCmd;
         }
@@ -837,7 +861,9 @@ void Renderer::drawDirectionalShadows()
     if (!shadowRenderer_ || !shadowPass_)
         return;
     shadowRenderer_->DrawDirectional(meshes_, *shadowPass_, directionalShadowMaps_,
-                                     shadowPackCache_, imageIndex_);
+                                     shadowPackCache_, imageIndex_,
+                                     shadowSettings_.directionalRasterBiasConstant_,
+                                     shadowSettings_.directionalRasterBiasSlope_);
 }
 
 void Renderer::drawPointShadows()
@@ -845,7 +871,9 @@ void Renderer::drawPointShadows()
     if (!shadowRenderer_ || !shadowPass_)
         return;
     shadowRenderer_->DrawPoint(meshes_, *shadowPass_, pointShadowMaps_,
-                               shadowPackCache_, imageIndex_);
+                               shadowPackCache_, imageIndex_,
+                               shadowSettings_.pointRasterBiasConstant_,
+                               shadowSettings_.pointRasterBiasSlope_);
 }
 
 void Renderer::drawShadows()
@@ -853,7 +881,11 @@ void Renderer::drawShadows()
     if (!shadowRenderer_ || !shadowPass_)
         return;
     shadowRenderer_->DrawAll(meshes_, *shadowPass_, directionalShadowMaps_,
-                             pointShadowMaps_, shadowPackCache_, imageIndex_);
+                             pointShadowMaps_, shadowPackCache_, imageIndex_,
+                             shadowSettings_.directionalRasterBiasConstant_,
+                             shadowSettings_.directionalRasterBiasSlope_,
+                             shadowSettings_.pointRasterBiasConstant_,
+                             shadowSettings_.pointRasterBiasSlope_);
 }
 
 void Renderer::createSyncObjects()
@@ -1053,8 +1085,9 @@ void Renderer::updateMats(uint32_t currentImage)
                 }
         }
     if (renderOptionsUbo_)
-    renderOptionsUbo_->update(currentImage, pbrDebugView_,
-                              pbrEnvironmentSettings_);
+        renderOptionsUbo_->update(currentImage, pbrDebugView_,
+                                  pbrEnvironmentSettings_, shadowSettings_,
+                                  debugShadowLightSlot_);
 
     for (auto& mesh : meshes_)
         {

@@ -465,6 +465,8 @@ int main(int argc, char* args[])
                     glm::vec3(1.2f, 1.2f, 1.2f),
                     glm::vec3(1.0f, 0.09f, 0.032f),
                     glm::vec3(2.0f, 4.0f, 2.0f));
+                pointLight->SetShadowRange(0.2f, 18.0f);
+                pointLight->SetShadowFacePaddingTexels(1.5f);
                 pointLight->SetName("shadow_demo_point_light");
                 scene->AddLight(pointLight);
                 demoPointLight = pointLight;
@@ -510,9 +512,14 @@ int main(int argc, char* args[])
             if (!loadedScene)
                 {
                     app.SetScene(buildPointShadowDemoScene());
-                    app.GetRenderer()->LoadEnvironmentTexture("./Res/matrix.jpg");
-                    app.GetRenderer()->LoadIrradianceTexture("./Res/matrix.jpg");
-                    app.GetRenderer()->LoadPrefilteredEnvironmentTexture("./Res/matrix.jpg");
+                    auto renderer = app.GetRenderer();
+                    renderer->LoadEnvironmentTexture("./Res/matrix.jpg");
+                    renderer->LoadIrradianceTexture("./Res/matrix.jpg");
+                    renderer->LoadPrefilteredEnvironmentTexture("./Res/matrix.jpg");
+                    renderer->SetShadowSettings(Multor::Vulkan::ShadowSettings {});
+                    if (demoPointLight && demoPointLight->HasLightSlot())
+                        renderer->SetDebugShadowLightSlot(
+                            demoPointLight->GetLightSlot());
                     if (auto scene = app.GetScene())
                         {
                             if (auto controller = scene->GetController())

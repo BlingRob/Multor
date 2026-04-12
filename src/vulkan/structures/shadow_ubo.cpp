@@ -2,6 +2,7 @@
 
 #include "shadow_ubo.h"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace Multor::Vulkan::UBOs
@@ -74,9 +75,15 @@ ShadowPack PackShadowData(const std::vector<const Multor::BLight*>& lights)
                     const glm::vec3 pos = pointLight->GetPos();
                     auto& entry = out.point_.entries_[static_cast<std::size_t>(
                         out.point_.counts_.x)];
+                    const float nearPlane = pointShadow->GetNearPlane();
+                    const float farPlane = pointShadow->GetFarPlane();
                     entry.shadowMatrices_ = pointShadow->BuildShadowMatrices(pos);
-                    entry.lightPosFar_ =
-                        glm::vec4(pos, pointShadow->GetFarPlane());
+                    entry.lightPosFar_ = glm::vec4(pos, farPlane);
+                    entry.lightRange_ = glm::vec4(
+                        nearPlane,
+                        farPlane,
+                        1.0f / std::max(farPlane - nearPlane, 1.0e-4f),
+                        0.0f);
                     entry.meta_ = glm::ivec4(shadow->GetId(), light->GetLightSlot(),
                                              1, 0);
                     ++out.point_.counts_.x;

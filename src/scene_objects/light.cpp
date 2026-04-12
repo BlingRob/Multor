@@ -198,6 +198,24 @@ PointLight::PointLight(const glm::vec3& ambient, const glm::vec3& diffuse,
     shadow_ = std::make_shared<PointShadow>();
 }
 
+void PointLight::SetShadowRange(float zNear, float zFar)
+{
+    if (auto* pointShadow = dynamic_cast<PointShadow*>(shadow_.get()))
+        {
+            pointShadow->SetPerspectiveRange(zNear, zFar);
+            NotifyChanged();
+        }
+}
+
+void PointLight::SetShadowFacePaddingTexels(float paddingTexels)
+{
+    if (auto* pointShadow = dynamic_cast<PointShadow*>(shadow_.get()))
+        {
+            pointShadow->SetFacePaddingTexels(paddingTexels);
+            NotifyChanged();
+        }
+}
+
 void PointLight::SetPos(const glm::vec3& position)
 {
     SetVec(glm::vec4(position, 1.0f));
